@@ -183,6 +183,19 @@ def extract_kafka_value(kafka):
     return kafka_courses
 
 
+def execute_find_courses(message):
+        debug("Finding Course definition/s in Event...")
+
+        # If the event is straight from aws:pipes, extract Kafka data out from it.
+        if (source_is_pipe(message)):
+                return extract_pipe_value(message)
+        # If the event is straight from aws:kafka, return it; this is what we want.
+        elif (source_is_kafka(message)):
+                return extract_kafka_value(message)
+        else:
+                dcrit ('Failed to retrieve courses from EventBridge::Pipes and Kafka!')
+                return None
+
 def get_courses(event):
     # Mandatory Print to CloudWatch. ###############################################
     debug (event)
@@ -207,16 +220,10 @@ def get_courses(event):
         derr ('Event has no body!')
         return http_error('Event has no body!')
 
-    debug("Finding Course definition/s in Event...")
-
-    # If the event is straight from aws:pipes, extract Kafka data out from it.
-    if (source_is_pipe(lambda_body)):
-        return extract_pipe_value(lambda_body)
-    # If the event is straight from aws:kafka, return it; this is what we want.
-    elif (source_is_kafka(lambda_body)):
-        return extract_kafka_value(lambda_body)
-
-    dcrit ('Failed to retrieve courses from EventBridge::Pipes and Kafka!')
+    courses = []
+    for message in lambda_body:
+        courses.append(execute_find_courses(message))
+    return courses
 
 
 def map_uts_ahegs(courses):
@@ -225,98 +232,99 @@ def map_uts_ahegs(courses):
     
     mapped_uts_ahegs_fields = []
 
-    for course in courses:
-        # Only used for debug.
-        abbr_name = course.get('abbr_name', '__NO_ABBR_NAME__')
+    for course_group in courses:
+        for course in course_group:
+                # Only used for debug.
+                abbr_name = course.get('abbr_name', '__NO_ABBR_NAME__')
 
-        # Check that this course has the required keys for AHEGS.
-        if (STRICT):
-            key_validation = [ 'award', 'requirement', 'ai_association' ]
-            for k in key_validation:
-                if (k not in course):
-                    return http_error(F"{abbr_name} ({course.get('sys_id', '__NO_SYS_ID__')}) - Event::Body::Course has no [{k}]", pre_exception_response=mapped_uts_ahegs_fields)
+                # Check that this course has the required keys for AHEGS.
+                if (STRICT):
+                        key_validation = [ 'award', 'requirement', 'ai_association' ]
+                        for k in key_validation:
+                                if (k not in course):
+                                        return http_error(F"{abbr_name} ({course.get('sys_id', '__NO_SYS_ID__')}) - Event::Body::Course has no [{k}]", pre_exception_response=mapped_uts_ahegs_fields)
 
-        # Get required fields/attributes for course.
-        awards = course.get('award', None);
-        requirements = course.get('requirement', None);
-        ai_associations = course.get('ai_association', None)
+                # Get required fields/attributes for course.
+                awards = course.get('award', None);
+                requirements = course.get('requirement', None);
+                ai_associations = course.get('ai_association', None)
 
-        if (STRICT and (not awards or not requirements or not ai_associations)):
-            dwarn (F'{abbr_name} - Either award, requirements, or ai_associations are missing...')
-            dmess (F'{abbr_name} - is None? awards: {awards is None}. requirements: {requirements is None}. ai_associations: {ai_associations is None}.')
-            continue
+                if (STRICT and (not awards or not requirements or not ai_associations)):
+                        dwarn (F'{abbr_name} - Either award, requirements, or ai_associations are missing...')
+                        dmess (F'{abbr_name} - is None? awards: {awards is None}. requirements: {requirements is None}. ai_associations: {ai_associations is None}.')
+                        continue
 
-        debug(F'{abbr_name} - Validation checks complete! Running AHEGS filtering...')
+                debug(F'{abbr_name} - Validation checks complete! Running AHEGS filtering...')
 
-        # Search for 'award_type' in awards.
-        award_information = get_attributes(awards, {
-                                                'attribute_target': 'award_type',
-                                                'target_check': ('value', 'award_level'),
-                                                'return_value': ('award_information', '__NO_AWARD_INFORMATION__')
-                                                })
-        debug(F'{abbr_name} - Received Award Information. Found: {len(award_information)}.')
+                # Search for 'award_type' in awards.
+                award_information = get_attributes(awards, {
+                                                        'attribute_target': 'award_type',
+                                                        'target_check': ('value', 'award_level'),
+                                                        'return_value': ('award_information', '__NO_AWARD_INFORMATION__')
+                                                        })
+                debug(F'{abbr_name} - Received Award Information. Found: {len(award_information)}.')
 
-        # Search for 'type' in requirements.
-        requirement_description = get_attributes(requirements, {
-                                                'attribute_target': 'type',
-                                                'target_check': ('value', 'admission'),
-                                                'return_value': ('description', '__NO_REQUIREMENT_DESCRIPTION__')
-                                                })
-        debug(F'{abbr_name} - Received Requirement Description. Found: {len(requirement_description)}.')
+                # Search for 'type' in requirements.
+                requirement_description = get_attributes(requirements, {
+                                                        'attribute_target': 'type',
+                                                        'target_check': ('value', 'admission'),
+                                                        'return_value': ('description', '__NO_REQUIREMENT_DESCRIPTION__')
+                                                        })
+                debug(F'{abbr_name} - Received Requirement Description. Found: {len(requirement_description)}.')
 
-        # Assert that there is exactly one occurence of award_information and requirement_description.
-        if (STRICT and len(award_information) != 1 and len(requirement_description) != 1):
-            return http_error(F"The Course: {course['code']} - {course['abbr_name']} has zero or more entries in award_information and requirement_description! Found award_information: {len(award_information)}, expected: 1, and requirement_description: {len(requirement_description)}, expected: 1!",
-                                pre_exception_response=mapped_uts_ahegs_fields)
+                # Assert that there is exactly one occurence of award_information and requirement_description.
+                if (STRICT and len(award_information) != 1 and len(requirement_description) != 1):
+                        return http_error(F"The Course: {course['code']} - {course['abbr_name']} has zero or more entries in award_information and requirement_description! Found award_information: {len(award_information)}, expected: 1, and requirement_description: {len(requirement_description)}, expected: 1!",
+                                        pre_exception_response=mapped_uts_ahegs_fields)
 
-        if (STRICT):
-            debug(F'{abbr_name} - Assert passed! Looking for ai_associations...')
+                if (STRICT):
+                        debug(F'{abbr_name} - Assert passed! Looking for ai_associations...')
 
-        # Find all ai_associations that match.
-        ai_associations_match = get_attributes(ai_associations, {
-                                                'attribute_target': 'association_type',
-                                                'target_check': ('value', 'articulated_course'),
-                                                'return_value': ( 'description', '__NO_ARTICULATION_DESCRIPTION__' )
-                                                }) if ai_associations else None
-        if (ai_associations_match):
-            debug(F'{abbr_name} - Search for matching ai_associations complete! Found: {len(ai_associations_match)}')
-        
-        ftd = course.get('duration_ft_std', None)
-        ftd_unit = try_get('duration_ft_period', 'label', source=course)
+                # Find all ai_associations that match.
+                ai_associations_match = get_attributes(ai_associations, {
+                                                        'attribute_target': 'association_type',
+                                                        'target_check': ('value', 'articulated_course'),
+                                                        'return_value': ( 'description', '__NO_ARTICULATION_DESCRIPTION__' )
+                                                        }) if ai_associations else None
+                if (ai_associations_match):
+                        debug(F'{abbr_name} - Search for matching ai_associations complete! Found: {len(ai_associations_match)}')
+                
+                ftd = course.get('duration_ft_std', None)
+                ftd_unit = try_get('duration_ft_period', 'label', source=course)
 
-        # Accumulate relevant data as a single entry.
-        mapped_uts_ahegs_fields.append(
-            {
-                "HARVEST_YEAR": course.get('implementation_year', None),
-                "HARVEST_PERIOD": None,
-                "HARVEST_DATE": None,
+                # Accumulate relevant data as a single entry.
+                mapped_uts_ahegs_fields.append(
+                {
+                        "HARVEST_YEAR": course.get('implementation_year', None),
+                        "HARVEST_PERIOD": None,
+                        "HARVEST_DATE": None,
 
-                "CODE": course.get('code', None),
-                "VERSION": course.get('sms_version', None),
-                "COURSENAME": course.get('name', None),
+                        "CODE": course.get('code', None),
+                        "VERSION": course.get('sms_version', None),
+                        "COURSENAME": course.get('name', None),
 
-                "ADMISSIONREQUIREMENTS": requirement_description[0] if (len(requirement_description) > 0) else None,
+                        "ADMISSIONREQUIREMENTS": requirement_description[0] if (len(requirement_description) > 0) else None,
 
-                "MINIMUMDURATION": None,
-                "INDUSTRIALTRAINING": course.get('summary', None),
-                "OVERSEASSTUDY": course.get('features', None),
-                "COURSESTRUCTURE1": course.get('structure', None),
+                        "MINIMUMDURATION": None,
+                        "INDUSTRIALTRAINING": course.get('summary', None),
+                        "OVERSEASSTUDY": course.get('features', None),
+                        "COURSESTRUCTURE1": course.get('structure', None),
 
-                "ARTICULATION": ai_associations_match[0] if (ai_associations_match and len(ai_associations_match) > 0) else None,
-                "FURTHERSTUDY": course.get('pathways', None),
-                "PROFESSIONALRECOGNITION": course.get('professional_recognition', None),
-                "LEVELOFAWARD": award_information[0] if (len(award_information) > 0) else None,
-                "HONOURS": None,
-                "LOADEFTSL": None,
+                        "ARTICULATION": ai_associations_match[0] if (ai_associations_match and len(ai_associations_match) > 0) else None,
+                        "FURTHERSTUDY": course.get('pathways', None),
+                        "PROFESSIONALRECOGNITION": course.get('professional_recognition', None),
+                        "LEVELOFAWARD": award_information[0] if (len(award_information) > 0) else None,
+                        "HONOURS": None,
+                        "LOADEFTSL": None,
 
-                "FULLTIMEDURATION": ftd,
-                "FULLTIMEDURATIONUNIT": ftd_unit,
-                "PARTTIMEDURATION": course.get('duration_pt_std', None),
-                "PARTTIMEDURATIONUNIT": try_get('duration_pt_period', 'label', source=course)
-            }
-        )
+                        "FULLTIMEDURATION": ftd,
+                        "FULLTIMEDURATIONUNIT": ftd_unit,
+                        "PARTTIMEDURATION": course.get('duration_pt_std', None),
+                        "PARTTIMEDURATIONUNIT": try_get('duration_pt_period', 'label', source=course)
+                }
+                )
 
-        debug(F'{abbr_name} - Mapped UTS_AHEGS with CourseLoop properties.')
+                debug(F'{abbr_name} - Mapped UTS_AHEGS with CourseLoop properties.')
         
     debug(F'Mapped {len(mapped_uts_ahegs_fields)} UTS_AHEGS Fields!')
     return mapped_uts_ahegs_fields

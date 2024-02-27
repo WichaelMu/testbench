@@ -2,4 +2,3 @@ SQLAlchemy==2.0.25
 pandas==2.2.0
 pyarrow==15.0.0
 pymssql==2.2.11
-inflect==7.0.0
