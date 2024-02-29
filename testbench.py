@@ -1,6 +1,7 @@
 import json
 import logging
 import base64
+from debug_utils import debug, dwarn, derr, dmess, dspec, dcrit
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -48,27 +49,6 @@ def get_attributes(source, value_map):
                                    )
 
 
-def lambda_log(message, verbosity: int, prefix=''):
-    if (RUNNING_FROM_LAMBDA):
-        logging.log(verbosity, message)
-    else:
-        suffix = "\033[0m" if len(prefix) > 0 else ""
-        print (F'{prefix}{message}{suffix}')
-
-def debug(message):
-    lambda_log(message, logging.INFO)
-def dwarn(message):
-    lambda_log (message, logging.WARNING, '\033[33m')
-def derr(message):
-    lambda_log (message, logging.ERROR, '\033[31m')
-def dmess(message):
-    lambda_log (message, logging.INFO, '\033[32m')
-def dspec(message):
-    lambda_log (message, logging.INFO, '\033[36m')
-def dcrit (critical):
-    lambda_log (critical, logging.CRITICAL, '\033[1m\033[31m')
-
-
 def verify_source(event, key, constant):
     val = event.get(key, None)
     if (val and constant in val):
@@ -93,6 +73,7 @@ def is_b64(any) -> bool:
 def deserialise_string(serialised):
     dmess ('Checking if deserialisation is required.')
     if (not isinstance (serialised, str) and not isinstance (serialised, bytes)):
+        dmess (F'Deserialise not necessary for {type(serialised)}...')
         return serialised
     dmess (F'Deserialise necessary on {type(serialised)}...')
 
@@ -110,7 +91,6 @@ def extract_pipe_value(pipe):
     if (not pipe):
         derr ('Pipe is None!')
         return []
-    dmess ('Pipe is not None.')
 
     if (not isinstance(pipe, dict)):
         derr (F'extract_pipe_value is not handling a dict!\n\tType: {type(pipe)}\n\tValue: {pipe}')
@@ -129,7 +109,7 @@ def extract_pipe_value(pipe):
     payload = deserialise_string(payload)
 
     # From here onwards, the Payload should be treated as Kafka Message/s.
-    dmess ('Handing Payload over to ExtractKafkaValue::...')
+    dmess ('Handing Payload over to ExtractKafkaValue::')
     return extract_kafka_value(payload)
 
 def extract_kafka_value(kafka):
@@ -139,11 +119,10 @@ def extract_kafka_value(kafka):
     if (not kafka):
         derr ('Kafka is None!')
         return []
-    dmess ('Kafka is not None.')
 
     # Ensure we are not working with a string, a B64-encoded string, a list, or anything else...
     if (not isinstance (kafka, dict)):
-        derr (F'extract_kafka_value is not handling a dict!\n\tType: {type(kafka)}\n\tValue: {kafka}')
+        derr (F'extract_kafka_value is not handling a dict!\n\tType: {type(kafka)}\n\tValue:\n\t\t{kafka}')
         return []
     dmess ('Kafka is typeof(dict).')
 
@@ -169,7 +148,6 @@ def extract_kafka_value(kafka):
             if (not kafka_value):
                 dwarn (F'{kafka_topic} - KafkaValue is None! Continuing...')
                 continue
-            dmess (F'{kafka_topic} - KafkaValue is not None')
             dmess ('Deserialising Kafka Message into Python Object...')
 
             # Some mixed answers about whether or not Pipes & Kafka automatically decode B64-encoded strings.
@@ -179,26 +157,26 @@ def extract_kafka_value(kafka):
             kafka_courses.append(kafka_deserialised)
 
     if (RUNNING_FROM_LAMBDA):
-        debug (F'Retrieved Course definition/s from Kafka!\n\tFound: {len(kafka_courses)}.\n\tValue/s: {kafka_courses}.')
+        debug (F'Retrieved Course definition/s from Kafka!\n\tFound: {len(kafka_courses)}.\n\tValue/s:\n\t\t{kafka_courses}.')
     return kafka_courses
 
 
 def execute_find_courses(message):
-        debug("Finding Course definition/s in Event...")
+    debug("Finding Course definition/s in Event...")
 
-        # If the event is straight from aws:pipes, extract Kafka data out from it.
-        if (source_is_pipe(message)):
-                return extract_pipe_value(message)
-        # If the event is straight from aws:kafka, return it; this is what we want.
-        elif (source_is_kafka(message)):
-                return extract_kafka_value(message)
-        else:
-                dcrit ('Failed to retrieve courses from EventBridge::Pipes and Kafka!')
-                return None
+    # If the event is straight from aws:pipes, extract Kafka data out from it.
+    if (source_is_pipe(message)):
+        return extract_pipe_value(message)
+    # If the event is straight from aws:kafka, return it; this is what we want.
+    elif (source_is_kafka(message)):
+        return extract_kafka_value(message)
+    else:
+        dcrit (F'Failed to retrieve courses from EventBridge::Pipes and Kafka!\nMessage:\n\t{message}')
+    return None
 
 def get_courses(event):
     # Mandatory Print to CloudWatch. ###############################################
-    debug (event)
+    debug (F'\tMandatory Print to CloudWatch.\n\n{event}')
     ################################################################################
 
     debug ("Finding ['body'] in event...")
@@ -220,111 +198,146 @@ def get_courses(event):
         derr ('Event has no body!')
         return http_error('Event has no body!')
 
+    debug("Finding Course definition/s in Event...")
+
     courses = []
     for message in lambda_body:
-        courses.append(execute_find_courses(message))
+        course_payload = execute_find_courses(message)
+        if (course_payload):
+            courses.append(course_payload)
+    
+    debug (F'Found {len(courses)} course/s! Handing courses over; map to UTS_AHEGS...')
     return courses
 
 
 def map_uts_ahegs(courses):
+    if (not isinstance (courses, list)):
+        # We cannot continue if 'courses' is not of <class 'list'>.
+        #     Something is also very wrong.
+        fatal = F"Courses is not typeof(list)! Found {type(courses)}, expected <class 'list'>."
+        dcrit (fatal)
+        return http_error(fatal)
+
     if ('Error' in courses):
         return courses
     
     mapped_uts_ahegs_fields = []
 
+    # courses: list< list<payload> > -- 2D Array. First dimension is the entire structure of courses,
+    #                                   Second dimension is an array containing payloads for each
+    #                                   EventBridge Pipe payload or Kafka Message batch.
+    # course_group: list<payload>    -- The course definition/s for the individual payload.
+    # course: map <str, T>           -- The course definition.
+    #
+    # "courses":
+    # [
+    #     [
+    #         -- course_group --
+    #         {course}, {course}, {course}
+    #     ],
+    #     [
+    #         -- course_group --
+    #         {course}, {course}, {course}
+    #     ]
+    # ]
+
     for course_group in courses:
         for course in course_group:
-                # Only used for debug.
-                abbr_name = course.get('abbr_name', '__NO_ABBR_NAME__')
+            if (not isinstance (course, dict)):
+                warning = F"Course definition in CourseGroup is not typeof(dict)! Found {type(course)}, expected <class 'dict'>.\nData:\n\t{course}."
+                dwarn (warning)
+                continue
+            # Only used for debug.
+            abbr_name = course.get('abbr_name', '__NO_ABBR_NAME__')
 
-                # Check that this course has the required keys for AHEGS.
-                if (STRICT):
-                        key_validation = [ 'award', 'requirement', 'ai_association' ]
-                        for k in key_validation:
-                                if (k not in course):
-                                        return http_error(F"{abbr_name} ({course.get('sys_id', '__NO_SYS_ID__')}) - Event::Body::Course has no [{k}]", pre_exception_response=mapped_uts_ahegs_fields)
+            # Check that this course has the required keys for AHEGS.
+            if (STRICT):
+                key_validation = [ 'award', 'requirement', 'ai_association' ]
+                for k in key_validation:
+                    if (k not in course):
+                        return http_error(F"{abbr_name} ({course.get('sys_id', '__NO_SYS_ID__')}) - Event::Body::Course has no [{k}]", pre_exception_response=mapped_uts_ahegs_fields)
 
-                # Get required fields/attributes for course.
-                awards = course.get('award', None);
-                requirements = course.get('requirement', None);
-                ai_associations = course.get('ai_association', None)
+            # Get required fields/attributes for course.
+            awards = course.get('award', None);
+            requirements = course.get('requirement', None);
+            ai_associations = course.get('ai_association', None)
 
-                if (STRICT and (not awards or not requirements or not ai_associations)):
-                        dwarn (F'{abbr_name} - Either award, requirements, or ai_associations are missing...')
-                        dmess (F'{abbr_name} - is None? awards: {awards is None}. requirements: {requirements is None}. ai_associations: {ai_associations is None}.')
-                        continue
+            if (STRICT and (not awards or not requirements or not ai_associations)):
+                dwarn (F'{abbr_name} - Either award, requirements, or ai_associations are missing...')
+                dmess (F'{abbr_name} - is None? awards: {awards is None}. requirements: {requirements is None}. ai_associations: {ai_associations is None}.')
+                continue
 
-                debug(F'{abbr_name} - Validation checks complete! Running AHEGS filtering...')
+            debug(F'{abbr_name} - Validation checks complete! Running AHEGS filtering...')
 
-                # Search for 'award_type' in awards.
-                award_information = get_attributes(awards, {
-                                                        'attribute_target': 'award_type',
-                                                        'target_check': ('value', 'award_level'),
-                                                        'return_value': ('award_information', '__NO_AWARD_INFORMATION__')
-                                                        })
-                debug(F'{abbr_name} - Received Award Information. Found: {len(award_information)}.')
+            # Search for 'award_type' in awards.
+            award_information = get_attributes(awards, {
+                                                    'attribute_target': 'award_type',
+                                                    'target_check': ('value', 'award_level'),
+                                                    'return_value': ('award_information', '__NO_AWARD_INFORMATION__')
+                                                    })
+            debug(F'{abbr_name} - Received Award Information. Found: {len(award_information)}.')
 
-                # Search for 'type' in requirements.
-                requirement_description = get_attributes(requirements, {
-                                                        'attribute_target': 'type',
-                                                        'target_check': ('value', 'admission'),
-                                                        'return_value': ('description', '__NO_REQUIREMENT_DESCRIPTION__')
-                                                        })
-                debug(F'{abbr_name} - Received Requirement Description. Found: {len(requirement_description)}.')
+            # Search for 'type' in requirements.
+            requirement_description = get_attributes(requirements, {
+                                                    'attribute_target': 'type',
+                                                    'target_check': ('value', 'admission'),
+                                                    'return_value': ('description', '__NO_REQUIREMENT_DESCRIPTION__')
+                                                    })
+            debug(F'{abbr_name} - Received Requirement Description. Found: {len(requirement_description)}.')
 
-                # Assert that there is exactly one occurence of award_information and requirement_description.
-                if (STRICT and len(award_information) != 1 and len(requirement_description) != 1):
-                        return http_error(F"The Course: {course['code']} - {course['abbr_name']} has zero or more entries in award_information and requirement_description! Found award_information: {len(award_information)}, expected: 1, and requirement_description: {len(requirement_description)}, expected: 1!",
-                                        pre_exception_response=mapped_uts_ahegs_fields)
+            # Assert that there is exactly one occurence of award_information and requirement_description.
+            if (STRICT and not RUNNING_FROM_LAMBDA and len(award_information) != 1 and len(requirement_description) != 1):
+                return http_error(F"The Course: {course['code']} - {course['abbr_name']} has zero or more entries in award_information and requirement_description! Found award_information: {len(award_information)}, expected: 1, and requirement_description: {len(requirement_description)}, expected: 1!",
+                                    pre_exception_response=mapped_uts_ahegs_fields)
 
-                if (STRICT):
-                        debug(F'{abbr_name} - Assert passed! Looking for ai_associations...')
+            if (STRICT):
+                debug(F'{abbr_name} - Assert passed! Looking for ai_associations...')
 
-                # Find all ai_associations that match.
-                ai_associations_match = get_attributes(ai_associations, {
-                                                        'attribute_target': 'association_type',
-                                                        'target_check': ('value', 'articulated_course'),
-                                                        'return_value': ( 'description', '__NO_ARTICULATION_DESCRIPTION__' )
-                                                        }) if ai_associations else None
-                if (ai_associations_match):
-                        debug(F'{abbr_name} - Search for matching ai_associations complete! Found: {len(ai_associations_match)}')
-                
-                ftd = course.get('duration_ft_std', None)
-                ftd_unit = try_get('duration_ft_period', 'label', source=course)
+            # Find all ai_associations that match.
+            ai_associations_match = get_attributes(ai_associations, {
+                                                    'attribute_target': 'association_type',
+                                                    'target_check': ('value', 'articulated_course'),
+                                                    'return_value': ( 'description', '__NO_ARTICULATION_DESCRIPTION__' )
+                                                    }) if ai_associations else None
+            if (ai_associations_match):
+                debug(F'{abbr_name} - Search for matching ai_associations complete! Found: {len(ai_associations_match)}')
+            
+            ftd = course.get('duration_ft_std', None)
+            ftd_unit = try_get('duration_ft_period', 'label', source=course)
 
-                # Accumulate relevant data as a single entry.
-                mapped_uts_ahegs_fields.append(
+            # Accumulate relevant data as a single entry.
+            mapped_uts_ahegs_fields.append(
                 {
-                        "HARVEST_YEAR": course.get('implementation_year', None),
-                        "HARVEST_PERIOD": None,
-                        "HARVEST_DATE": None,
+                    "HARVEST_YEAR": course.get('implementation_year', None),
+                    "HARVEST_PERIOD": None,
+                    "HARVEST_DATE": None,
 
-                        "CODE": course.get('code', None),
-                        "VERSION": course.get('sms_version', None),
-                        "COURSENAME": course.get('name', None),
+                    "CODE": course.get('code', None),
+                    "VERSION": course.get('sms_version', None),
+                    "COURSENAME": course.get('name', None),
 
-                        "ADMISSIONREQUIREMENTS": requirement_description[0] if (len(requirement_description) > 0) else None,
+                    "ADMISSIONREQUIREMENTS": requirement_description[0] if (len(requirement_description) > 0) else None,
 
-                        "MINIMUMDURATION": None,
-                        "INDUSTRIALTRAINING": course.get('summary', None),
-                        "OVERSEASSTUDY": course.get('features', None),
-                        "COURSESTRUCTURE1": course.get('structure', None),
+                    "MINIMUMDURATION": None,
+                    "INDUSTRIALTRAINING": course.get('summary', None),
+                    "OVERSEASSTUDY": course.get('features', None),
+                    "COURSESTRUCTURE1": course.get('structure', None),
 
-                        "ARTICULATION": ai_associations_match[0] if (ai_associations_match and len(ai_associations_match) > 0) else None,
-                        "FURTHERSTUDY": course.get('pathways', None),
-                        "PROFESSIONALRECOGNITION": course.get('professional_recognition', None),
-                        "LEVELOFAWARD": award_information[0] if (len(award_information) > 0) else None,
-                        "HONOURS": None,
-                        "LOADEFTSL": None,
+                    "ARTICULATION": ai_associations_match[0] if (ai_associations_match and len(ai_associations_match) > 0) else None,
+                    "FURTHERSTUDY": course.get('pathways', None),
+                    "PROFESSIONALRECOGNITION": course.get('professional_recognition', None),
+                    "LEVELOFAWARD": award_information[0] if (len(award_information) > 0) else None,
+                    "HONOURS": None,
+                    "LOADEFTSL": None,
 
-                        "FULLTIMEDURATION": ftd,
-                        "FULLTIMEDURATIONUNIT": ftd_unit,
-                        "PARTTIMEDURATION": course.get('duration_pt_std', None),
-                        "PARTTIMEDURATIONUNIT": try_get('duration_pt_period', 'label', source=course)
+                    "FULLTIMEDURATION": ftd,
+                    "FULLTIMEDURATIONUNIT": ftd_unit,
+                    "PARTTIMEDURATION": course.get('duration_pt_std', None),
+                    "PARTTIMEDURATIONUNIT": try_get('duration_pt_period', 'label', source=course)
                 }
-                )
+            )
 
-                debug(F'{abbr_name} - Mapped UTS_AHEGS with CourseLoop properties.')
+            debug(F'{abbr_name} - Mapped UTS_AHEGS with CourseLoop properties.')
         
     debug(F'Mapped {len(mapped_uts_ahegs_fields)} UTS_AHEGS Fields!')
     return mapped_uts_ahegs_fields
@@ -333,7 +346,7 @@ def map_uts_ahegs(courses):
 def try_get(*args, source):
     if (not isinstance(source, dict)):
         if (STRICT):
-            derr (F'source is not an instance of dict! {source}\nReturning None instead...')
+            derr (F'source is not an instance of dict! {source}\nReturning source input instead...')
         return source
 
     val = source.get(args[0], None)
@@ -349,6 +362,20 @@ def try_get(*args, source):
     return None
 
 
+def dispatch_ahegs_database(uts_ahegs):
+    if ('Error' in uts_ahegs):
+        return
+    debug ('Establishing connection to database...')
+    engine, cnx, meta = establish_connection()
+    debug ('Connection to AHEGS database established.')
+
+    for ahegs in uts_ahegs:
+        inject_ahegs(engine, meta, ahegs)
+
+    cnx.close()
+    debug ('Closed connection to database.')
+
+
 def lambda_handler(event, context):
     courses = get_courses(event);
     uts_ahegs = map_uts_ahegs(courses);
@@ -359,21 +386,5 @@ def lambda_handler(event, context):
         "body": json.dumps (uts_ahegs),
     }
 
-if __name__ == '__main__' and not RUNNING_FROM_LAMBDA:
-    dcrit('################################################################################')
-    dcrit('  Running Test Suite')
-    dcrit('################################################################################')
-    dcrit('|| EB PIPE MA BA |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||')
-    __PAYLOAD_FILE = "EB-PIPE-MA-BA.json"
-    debug (lambda_handler(None, None))
-    dcrit('||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||')
-    dcrit('|| KAFKA MA BA |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||')
-    __PAYLOAD_FILE = "KAFKA-MA-BA.json"
-    debug (lambda_handler(None, None))
-    dcrit('||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||')
-    dcrit('|| POSTMAN |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||')
-    __PAYLOAD_FILE = "postman.json"
-    debug (lambda_handler(None, None))
-    dcrit('||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||')
-    dcrit('################################################################################')
-    dcrit('  Test Suite Complete')
+if (__name__ == '__main__'):
+    print (lambda_handler(None, None))
