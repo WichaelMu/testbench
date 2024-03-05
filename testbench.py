@@ -1,7 +1,9 @@
 import json
 import logging
 import base64
-from debug_utils import debug, dwarn, derr, dmess, dspec, dcrit
+import debug_utils as dbg
+from testdatabase import establish_connection, inject_ahegs
+from debug_utils import debug, dwarn, derr, dmess, dspec, dcrit, Verbosity, Status
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -16,13 +18,12 @@ __PAYLOAD_FILE = 'real.json'
 """The name of the payload JSON file used for debugging. Only used when !RUNNING_FROM_LAMBDA."""
 
 
-def http_error(error_message, pre_exception_response = None):
+def http_error(error_message):
     if (not RUNNING_FROM_LAMBDA):
         derr (error_message)
 
     return {
         "Error": error_message,
-        "ResponseAtException": pre_exception_response
     }
 
 
@@ -49,16 +50,20 @@ def get_attributes(source, value_map):
                                    )
 
 
-def verify_source(event, key, constant):
-    val = event.get(key, None)
-    if (val and constant in val):
-        return event
-    return False
+def sanitise_html(markup):
+    if (not markup):
+        return None
+    return BeautifulSoup(markup, 'html.parser').get_text()
 
-def source_is_pipe(lambda_body):
+
+def verify_source(event, key, constant) -> bool:
+    val = event.get(key, None)
+    return (val and constant in val)
+
+def source_is_pipe(lambda_body) -> bool:
     return verify_source(lambda_body, key='resourceArn', constant='arn:aws:pipes:')
 
-def source_is_kafka(lambda_body):
+def source_is_kafka(lambda_body) -> bool:
     return verify_source(lambda_body, key='eventSource', constant='aws:kafka')
 
 def is_b64(any) -> bool:
@@ -70,7 +75,7 @@ def is_b64(any) -> bool:
         return True
     return False
 
-def deserialise_string(serialised):
+def deserialise(serialised) -> dict:
     dmess ('Checking if deserialisation is required.')
     if (not isinstance (serialised, str) and not isinstance (serialised, bytes)):
         dmess (F'Deserialise not necessary for {type(serialised)}...')
@@ -80,57 +85,54 @@ def deserialise_string(serialised):
     try:
         return json.loads(serialised)
     except Exception:
-        return False
+        return {}
 
 def b64_decode(encoded) -> bytes:
     return base64.b64decode(encoded)
 
-def extract_pipe_value(pipe):
+def extract_pipe_value(pipe) -> dict | None:
     dspec ('::ExtractPipeValue')
 
     if (not pipe):
-        derr ('Pipe is None!')
-        return []
+        dwarn ('Pipe is None!')
+        return None
 
     if (not isinstance(pipe, dict)):
         derr (F'extract_pipe_value is not handling a dict!\n\tType: {type(pipe)}\n\tValue: {pipe}')
-        return []
-    dmess ('Pipe is typeof(dict).')
+        return None
 
     # The Kafka Message/s are in the Payload of the EventBridge Pipe.
     payload = pipe.get('payload', None)
     if (not payload):
         derr ('Payload is None!')
-        return []
-    dmess ('Payload is not None.')
+        return None
 
     # The Payload now contains Kafka data.
     # If the Kafka Message/s are a string, it is most likely B64-encoded.
-    payload = deserialise_string(payload)
+    payload = deserialise(payload)
 
     # From here onwards, the Payload should be treated as Kafka Message/s.
     dmess ('Handing Payload over to ExtractKafkaValue::')
     return extract_kafka_value(payload)
 
-def extract_kafka_value(kafka):
+def extract_kafka_value(kafka) -> dict | None:
     dspec ('::ExtractKafkaValue')
 
     # If coming from Pipe, ensure that the Kafka data is not null.
     if (not kafka):
-        derr ('Kafka is None!')
-        return []
+        dwarn ('Kafka is None!')
+        return None
 
     # Ensure we are not working with a string, a B64-encoded string, a list, or anything else...
     if (not isinstance (kafka, dict)):
         derr (F'extract_kafka_value is not handling a dict!\n\tType: {type(kafka)}\n\tValue:\n\t\t{kafka}')
-        return []
-    dmess ('Kafka is typeof(dict).')
+        return None
 
     # We have to potentially check if the Source Is Kafka twice,
     #   in case this call came from ExtractPipeValue::
     if (not source_is_kafka(kafka)):
         derr ('Source is not Kafka!')
-        return []
+        return None
 
     # From here onwards, we are working with genuine Kafka data.
     dmess ('Source is Kafka.')
@@ -144,14 +146,14 @@ def extract_kafka_value(kafka):
     # Some mixed answers about whether or not Pipes & Kafka automatically decode B64-encoded strings.
     # Decode if B64-encoded, otherwise leave it as raw JSON.
     kafka_value = b64_decode(kafka_value) if is_b64(kafka_value) else kafka_value
-    kafka_deserialised = deserialise_string(kafka_value)
+    kafka_deserialised = deserialise(kafka_value)
 
     if (RUNNING_FROM_LAMBDA):
-        debug (F'Retrieved Course definition from Kafka!\nFound Value:\n\t{kafka_deserialised}.')
+        debug (F'Retrieved Course definition from Kafka!.')
     return kafka_deserialised
 
 
-def execute_find_courses(payload):
+def execute_find_courses(payload) -> dict | None:
     debug("Finding Course definition/s in Message...")
 
     # If the event is straight from aws:kafka, return it; this is what we want.
@@ -164,7 +166,15 @@ def execute_find_courses(payload):
         dcrit (F'Failed to retrieve courses from EventBridge::Pipes or MSK::Kafka!\nPayload:\n\t{payload}')
     return None
 
-def get_courses(event):
+def get_courses(event, ref_id) -> dict | None:
+    dbg.trace (
+        ulid         = ref_id,
+        tracepoint   = "EXTRACT_COURSE_DEFINITION",
+        tracemessage = "Extracting course definition from EventBridge Pipes & Kafka.",
+        status       = Status.START,
+        action       = "READ",
+    )
+
     # Mandatory Print to CloudWatch. ###############################################
     debug (F'\tMandatory Print to CloudWatch.\n\n{event}')
     ################################################################################
@@ -179,36 +189,75 @@ def get_courses(event):
     lambda_body = {}
 
     if ('body' in event):
-        if (RUNNING_FROM_LAMBDA):
+        if (RUNNING_FROM_LAMBDA and not isinstance (event, dict)):
             lambda_body = json.loads(event['body'])
         else:
             lambda_body = event['body']
 
     if (len(lambda_body) == 0):
-        derr ('Event has no body!')
+        dbg.trace (
+            ulid         = ref_id,
+            tracepoint   = "EXTRACT_COURSE_DEFINITION",
+            tracemessage = "Event has no body!",
+            status       = Status.FAILURE,
+            action       = "READ",
+            verbosity    = Verbosity.ERROR
+        )
         return http_error('Event has no body!')
 
-    debug("Finding Course definition/s in Event...")
-
     course_payload = execute_find_courses(lambda_body)
-    if (course_payload):
-        debug (F'Found {course_payload}! Handing course over to UTS_AHEGS mapping...')
+    if (course_payload and len(course_payload) > 0):
+        dbg.trace (
+            ulid         = ref_id,
+            tracepoint   = "EXTRACT_COURSE_DEFINITION",
+            tracemessage = F"Course definition found! Handing course over to UTS_AHEGS mapping.",
+            status       = Status.SUCCESS,
+            action       = "READ",
+        )
         return course_payload
 
-    derr ('Could not find course definition in Payload! Review event in Mandatory Print to CloudWatch...')
+    dbg.trace (
+        ulid         = ref_id,
+        tracepoint   = "EXTRACT_COURSE_DEFINITION",
+        tracemessage = "Could not find course definition in Payload! Review event in Mandatory Print to CloudWatch.",
+        status       = Status.FAILURE,
+        action       = "READ",
+        verbosity    = Verbosity.ERROR
+    )
     return None
 
 
-def map_uts_ahegs(course):
+def map_uts_ahegs(course, ref_id) -> tuple[dict, dict]:
+    dbg.trace (
+        ulid         = ref_id,
+        tracepoint   = "MAP_UTS_AHEGS",
+        tracemessage = "Mapping course to UTS_AHEGS format.",
+        status       = Status.START,
+        action       = "MAP",
+    )
+
     if ('Error' in course):
+        dbg.trace (
+            ulid         = ref_id,
+            tracepoint   = "MAP_UTS_AHEGS",
+            tracemessage = "The course definition contains error/s. Aborting UTS_AHEGS mapping.",
+            status       = Status.FAILURE,
+            action       = "MAP",
+            verbosity    = Verbosity.ERROR
+        )
         return course
-    
-    mapped_uts_ahegs_fields = []
 
     if (not isinstance (course, dict)):
-        warning = F"Course definition in CourseGroup is not typeof(dict)! Found {type(course)}, expected <class 'dict'>.\nData:\n\t{course}."
-        dwarn (warning)
-        return http_error(warning)
+        error_message = F"Course definition in CourseGroup is not typeof(dict)! Found {type(course)}, expected <class 'dict'>.\nData:\n\t{course}."
+        dbg.trace (
+            ulid         = ref_id,
+            tracepoint   = "MAP_UTS_AHEGS",
+            tracemessage = error_message,
+            status       = Status.FAILURE,
+            action       = "MAP",
+            verbosity    = Verbosity.ERROR
+        )
+        return http_error(error_message), {}
 
     # Only used for debug.
     abbr_name = course.get('abbr_name', '__NO_ABBR_NAME__')
@@ -218,7 +267,7 @@ def map_uts_ahegs(course):
         key_validation = [ 'award', 'requirement', 'ai_association' ]
         for k in key_validation:
             if (k not in course):
-                return http_error(F"{abbr_name} ({course.get('sys_id', '__NO_SYS_ID__')}) - Event::Body::Course has no [{k}]", pre_exception_response=mapped_uts_ahegs_fields)
+                return http_error(F"{abbr_name} ({course.get('sys_id', '__NO_SYS_ID__')}) - Event::Body::Course has no [{k}]"), {}
 
     # Get required fields/attributes for course.
     awards = course.get('award', None);
@@ -228,8 +277,6 @@ def map_uts_ahegs(course):
     if (STRICT and (not awards or not requirements or not ai_associations)):
         dwarn (F'{abbr_name} - Either award, requirements, or ai_associations are missing...')
         dmess (F'{abbr_name} - is None? awards: {awards is None}. requirements: {requirements is None}. ai_associations: {ai_associations is None}.')
-
-    debug(F'{abbr_name} - Validation checks complete! Running AHEGS filtering...')
 
     # Search for 'award_type' in awards.
     award_information = get_attributes(awards, {
@@ -249,8 +296,7 @@ def map_uts_ahegs(course):
 
     # Assert that there is exactly one occurence of award_information and requirement_description.
     if (STRICT and not RUNNING_FROM_LAMBDA and len(award_information) != 1 and len(requirement_description) != 1):
-        return http_error(F"The Course: {course['code']} - {course['abbr_name']} has zero or more entries in award_information and requirement_description! Found award_information: {len(award_information)}, expected: 1, and requirement_description: {len(requirement_description)}, expected: 1!",
-                            pre_exception_response=mapped_uts_ahegs_fields)
+        return http_error(F"The Course: {course['code']} - {course['abbr_name']} has zero or more entries in award_information and requirement_description! Found award_information: {len(award_information)}, expected: 1, and requirement_description: {len(requirement_description)}, expected: 1!"), {}
 
     if (STRICT):
         debug(F'{abbr_name} - Assert passed! Looking for ai_associations...')
@@ -264,45 +310,60 @@ def map_uts_ahegs(course):
     if (ai_associations_match):
         debug(F'{abbr_name} - Search for matching ai_associations complete! Found: {len(ai_associations_match)}')
     
-    ftd = course.get('duration_ft_std', None)
-    ftd_unit = try_get('duration_ft_period', 'label', source=course)
+    ftd             = course.get('duration_ft_std', None)
+    ftd_unit        = try_get('duration_ft_period', 'label', source=course)
+    course_code     = course.get('code', None)
+    course_version  = course.get('sms_version', None)
+    harvest_year    = course.get('implementation_year', None)
+    updated_by      = course.get('sys_updated_by', None)
+    course_metadata = dbg.trace_meta(
+                            code = course_code,
+                            version = course_version,
+                            harv_year = harvest_year,
+                            epoch = "0",
+                            updated_by = updated_by
+                       )
 
     # Accumulate relevant data as a single entry.
-    mapped_uts_ahegs_fields.append(
-        {
-            "HARVEST_YEAR": course.get('implementation_year', None),
-            "HARVEST_PERIOD": None,
-            "HARVEST_DATE": None,
+    mapped_uts_ahegs_fields = {
+        "HARVEST_YEAR": harvest_year,
+        "HARVEST_PERIOD": None,
+        "HARVEST_DATE": None,
 
-            "CODE": course.get('code', None),
-            "VERSION": course.get('sms_version', None),
-            "COURSENAME": course.get('name', None),
+        "CODE": course_code,
+        "VERSION": course_version,
+        "COURSENAME": course.get('name', None),
 
-            "ADMISSIONREQUIREMENTS": requirement_description[0] if (len(requirement_description) > 0) else None,
+        "ADMISSIONREQUIREMENTS": sanitise_html(requirement_description[0]) if (len(requirement_description) > 0) else None,
 
-            "MINIMUMDURATION": None,
-            "INDUSTRIALTRAINING": course.get('summary', None),
-            "OVERSEASSTUDY": course.get('features', None),
-            "COURSESTRUCTURE1": course.get('structure', None),
+        "MINIMUMDURATION": None,
+        "INDUSTRIALTRAINING": course.get('summary', None),
+        "OVERSEASSTUDY": course.get('features', None),
+        "COURSESTRUCTURE1": course.get('structure', None),
 
-            "ARTICULATION": ai_associations_match[0] if (ai_associations_match and len(ai_associations_match) > 0) else None,
-            "FURTHERSTUDY": course.get('pathways', None),
-            "PROFESSIONALRECOGNITION": course.get('professional_recognition', None),
-            "LEVELOFAWARD": award_information[0] if (len(award_information) > 0) else None,
-            "HONOURS": None,
-            "LOADEFTSL": None,
+        "ARTICULATION": ai_associations_match[0] if (ai_associations_match and len(ai_associations_match) > 0) else None,
+        "FURTHERSTUDY": course.get('pathways', None),
+        "PROFESSIONALRECOGNITION": course.get('professional_recognition', None),
+        "LEVELOFAWARD": award_information[0] if (len(award_information) > 0) else None,
+        "HONOURS": None,
+        "LOADEFTSL": None,
 
-            "FULLTIMEDURATION": ftd,
-            "FULLTIMEDURATIONUNIT": ftd_unit,
-            "PARTTIMEDURATION": course.get('duration_pt_std', None),
-            "PARTTIMEDURATIONUNIT": try_get('duration_pt_period', 'label', source=course)
-        }
+        "FULLTIMEDURATION": ftd,
+        "FULLTIMEDURATIONUNIT": ftd_unit,
+        "PARTTIMEDURATION": course.get('duration_pt_std', None),
+        "PARTTIMEDURATIONUNIT": try_get('duration_pt_period', 'label', source=course)
+    }
+
+    dbg.trace (
+        ulid         = ref_id,
+        tracepoint   = "MAP_UTS_AHEGS",
+        tracemessage = F"Mapped {abbr_name} UTS_AHEGS with CourseLoop properties.",
+        status       = Status.SUCCESS,
+        action       = "MAP",
+        metadata     = course_metadata
     )
-
-    debug(F'{abbr_name} - Mapped UTS_AHEGS with CourseLoop properties.')
         
-    debug(F'Mapped {len(mapped_uts_ahegs_fields)} UTS_AHEGS Fields!')
-    return mapped_uts_ahegs_fields
+    return mapped_uts_ahegs_fields, course_metadata
 
 
 def try_get(*args, source):
@@ -324,9 +385,59 @@ def try_get(*args, source):
     return None
 
 
+def dispatch_ahegs_database(uts_ahegs, course_metadata, ref_id):
+    dbg.trace (
+        ulid         = ref_id,
+        tracepoint   = "DATABASE",
+        tracemessage = "Dispatching UTS_AHEGS mapping to MS SQL database.",
+        status       = Status.START,
+        action       = "DISPATCH",
+        metadata     = course_metadata,
+    )
+
+    if ('Error' in uts_ahegs):
+        dbg.trace (
+            ulid         = ref_id,
+            tracepoint   = "DATABASE",
+            tracemessage = "UTS_AHEGS Mapping resulted and contains errors. Aborting dispatch to database.",
+            status       = Status.FAILURE,
+            action       = "DISPATCH",
+            metadata     = course_metadata,
+            verbosity    = Verbosity.ERROR
+        )
+        return
+
+    engine, cnx, meta = establish_connection(ref_id, course_metadata)
+
+    if (engine and cnx and meta):
+        inject_ahegs(engine, meta, uts_ahegs, ref_id, course_metadata)
+        cnx.close()
+        debug ('Closed connection to database.')
+
+
 def lambda_handler(event, context):
-    courses = get_courses(event);
-    uts_ahegs = map_uts_ahegs(courses);
+    ref_id = dbg.generate_ulid_now()
+
+    dbg.trace (
+        ulid = ref_id,
+        tracepoint="PROGRAM_EXECUTION",
+        tracemessage="UTS AHEGS Mapping program begins here.",
+        status = Status.START,
+        action = "EXEC",
+    )
+
+    courses = get_courses(event, ref_id);
+    uts_ahegs, course_metadata = map_uts_ahegs(courses, ref_id);
+    dispatch_ahegs_database(uts_ahegs, course_metadata, ref_id);
+
+    dbg.trace (
+        ulid = ref_id,
+        tracepoint="PROGRAM_EXECUTION",
+        tracemessage="UTS AHEGS Mapping program terminates here (before returning).",
+        status = Status.END,
+        action = "EXEC",
+        metadata = course_metadata
+    )
 
     return {
         "statusCode": "200",

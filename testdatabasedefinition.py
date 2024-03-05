@@ -5,18 +5,10 @@ def get_table_definition():
         "TableCount": "1",
         "Tables": [
             {
+                # The table to modify in MS SQL.
                 "TableName": "CMM_AHEGS",
-                "TablePath": "cmmdb",
                 "TableOwner": "WichaelMu",
-                "TableColumnsTotal": "24",
                 "TableColumns": [
-                # {
-                #     "ColumnName": "ts",
-                #     "ColumnType": "STRING",
-                #     "ColumnNullable": False,
-                #     "ColumnIsPk": True,
-                #     "ColumnLength": "36"
-                # },
                 {
                     "ColumnName": "HARVEST_YEAR",
                     "ColumnType": "STRING",
@@ -70,6 +62,11 @@ def get_table_definition():
                     "ColumnName": "OVERSEASSTUDY",
                     "ColumnType": "STRING",
                     "ColumnLength": "4096"
+                },
+                {
+                    "ColumnName": "CREATE_DT",
+                    "ColumnType": "DATETIME",
+                    "ColumnLength": "6"
                 },
                 {
                     "ColumnName": "ARTICULATION",
