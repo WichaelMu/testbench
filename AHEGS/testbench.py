@@ -2,8 +2,9 @@ import json
 import logging
 import base64
 import debug_utils as dbg
-from testdatabase import establish_connection, inject_ahegs
+from testdatabase import establish_connection, inject_ahegs, try_read
 from debug_utils import debug, dwarn, derr, dmess, dspec, dcrit, Verbosity, Status
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -447,3 +448,7 @@ def lambda_handler(event, context):
 
 if (__name__ == '__main__'):
     print (lambda_handler(None, None))
+
+    # env ENV=dev FUNCTION_NAME="dev_post_statements_ahegs_lambda" SECRET_NAME=dev/curriculum/courseloop/endpoints/api/credentials/client OPENSEARCH_ENDPOINT_URL=search.curriculum.dev.mesh.uts.edu.au MSSQL_SECRETS=dev/curriculum/cognos/endpoints/sqlserver/verge/credentials
+
+    # print (lambda_handler(None, None))

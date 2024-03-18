@@ -9,7 +9,7 @@ import yaml
 import logging
 import re
 
-logger = logging.getLogger(os.environ["FUNCTION_NAME"])
+logger = logging.getLogger("dev_post_statements_ahegs_lambda")
 logger.setLevel(logging.DEBUG)
 
 

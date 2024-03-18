@@ -2,8 +2,9 @@ import os
 import sqlalchemy as alchemy
 import sqlalchemy.orm as orm
 from api_common import get_secret
-from testbench import *
 from testdatabasedefinition import get_table_definition
+import debug_utils as dbg
+from debug_utils import debug, dwarn, derr, dmess, dspec, dcrit, Verbosity, Status
 
 decltype_map = {
     'UINT8': alchemy.Integer,
@@ -118,6 +119,13 @@ def establish_connection(ref_id, course_metadata) -> tuple[alchemy.Engine | None
         )
         return None, None, None
 
+def get_ahegs_table(meta):
+    UTS_TABLE_DEFINITION = get_table_definition()['Tables'][0]
+
+    table_name = UTS_TABLE_DEFINITION.get('TableName', 'CMM_AHEGS')
+    UTS_AHEGS = alchemy.Table(table_name, meta)
+
+    return UTS_TABLE_DEFINITION, UTS_AHEGS
 
 def inject_ahegs(engine, meta, argv, ref_id, course_metadata):
     """
@@ -133,10 +141,8 @@ def inject_ahegs(engine, meta, argv, ref_id, course_metadata):
         action       = "DISPATCH.INJECT",
         metadata     = course_metadata,
     )
-    UTS_TABLE_DEFINITION = get_table_definition()['Tables'][0]
 
-    table_name = UTS_TABLE_DEFINITION.get('TableName', 'CMM_AHEGS')
-    UTS_AHEGS = alchemy.Table(table_name, meta)
+    UTS_TABLE_DEFINITION, UTS_AHEGS = get_ahegs_table(meta)
 
     for table_column in UTS_TABLE_DEFINITION.get('TableColumns', []):
         column_name = table_column['ColumnName']
@@ -187,3 +193,12 @@ def inject_ahegs(engine, meta, argv, ref_id, course_metadata):
             action       = "DISPATCH.INJECT",
             metadata     = course_metadata,
         )
+
+def try_read(engine, cnx, meta, argv):
+    UTS_TABLE_DEFINITION, UTS_AHEGS = get_ahegs_table(meta)
+    read_session = orm.Session(engine)
+    try:
+        execute_read = read_session.execute(alchemy.select(alchemy.Column(argv)).select_from(UTS_AHEGS))
+        dspec (execute_read)
+    except:
+        pass
