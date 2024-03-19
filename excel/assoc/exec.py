@@ -9,18 +9,19 @@ def extract_course_info(description):
     course_codes.extend(matches)
 
     # Check for course type (exit-only or articulated)
-    if 'articulated' in description.lower():
+    # 'articulat' should match 'articulation', 'articulated', and 'articulate'.
+    if 'articulat' in description.lower():
         course_types.append('Articulated')
     elif 'exit-only' in description.lower():
         course_types.append('Exit-Only')
     else:
-        course_types.append('Unknown')  # Default type if not specified
+        course_types.append('Unknown')
 
     return course_codes, course_types
 
 def main():
     # Load the workbook
-    wb = load_workbook('Associations.xlsx')  # Replace 'your_excel_file.xlsx' with your file path
+    wb = load_workbook('Associations.xlsx')
     ws = wb['Ticking Off Sheet']
 
     out_wb = Workbook()
@@ -32,7 +33,7 @@ def main():
 
     # Iterate over each row in column G
     for r in range(1, rows):
-        description = ws['G'+str(r)].value
+        description = ws['G' + str(r)].value
         if (not description or (len(description) == 0)):
             continue
 
@@ -40,10 +41,8 @@ def main():
         course_codes, course_types = extract_course_info(description)
 
         # Populate course codes and course types into specific columns and rows
-        owning_code = ws['A'+str(r)].value
-        owning_course = ws['C'+str(r)].value
-        if (owning_code == 'C04430'):
-            print (F"{course_codes}")
+        owning_code = ws['A' + str(r)].value
+        owning_course = ws['C' + str(r)].value
         for course_code in course_codes:
             out_ws.cell(row=cell_intptr, column=1).value = owning_course
             out_ws.cell(row=cell_intptr, column=2).value = owning_code
