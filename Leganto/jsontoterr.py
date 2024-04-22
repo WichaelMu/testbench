@@ -27,7 +27,10 @@ def exec():
 
     if (len(sys.argv) > 1):
         JsonSource = sys.argv[1];
-        JsonResult = open(JsonSource, "r").read()
+        JsonResult = open(JsonSource, "r").read();
+    else:
+        print (F"Please supply a .json file as argv[1]");
+        sys.exit(1);
 
     JsonResult = replace (json.loads(JsonResult), JsonResult);
     JsonResult = JsonResult.replace(": ", " = ");
@@ -36,3 +39,4 @@ def exec():
 
 if (__name__ == "__main__"):
     exec();
+    sys.exit(0);
