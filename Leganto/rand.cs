@@ -13,7 +13,7 @@ public class Entry
 			: Formatted;
 
 		bool bUseSourceSisId = Args.Length > 1
-			? Args[1] == "__NO_SOURCE__" ? false : true
+			? Args[1] != "__NO_SOURCE__"
 			: true;
 
 		string SourceSisId = bUseSourceSisId
