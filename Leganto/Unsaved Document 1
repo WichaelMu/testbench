@@ -1,0 +1,16 @@
+,
+              "RequestBody": {
+                "citation_tags.$": "$.InCitationsArray.citation_tags",
+                "copyrights_status.$": "$.InCitationsArray.copyrights_status",
+                "last_modified_date.$": "$.InCitationsArray.last_modified_date",
+                "leganto_permalink.$": "$.InCitationsArray.leganto_permalink",
+                "link.$": "$.InCitationsArray.link",
+                "metadata.$": "$.InCitationsArray.metadata",
+                "note.$": "$.InCitationsArray.note",
+                "public_note.$": "$.InCitationsArray.public_note",
+                "secondary_type.$": "$.InCitationsArray.secondary_type",
+                "section_locked.$": "$.InCitationsArray.section_locked",
+                "status.$": "$.InCitationsArray.status",
+                "type.$": "$.InCitationsArray.type",
+                "type_attributes.$": "$.InCitationsArray.type_attributes"
+              }
