@@ -12,12 +12,19 @@ public class Entry
 			? Args[0]
 			: Formatted;
 
-		bool bUseSourceSisId = Args.Length > 1
-			? Args[1] != "__NO_SOURCE__"
-			: true;
+		if (!int.TryParse(ForceCode, out _))
+			ForceCode = Formatted;
 
-		string SourceSisId = bUseSourceSisId
+		Settings Settings = new Settings();
+		Settings.SetDefaults();
+		ProcessArguments(Args, ref Settings);
+
+		string SourceSisId = Settings.bUseSourceSisId
 			? $",\"source_sis_id\": \"{ForceCode}_U_2023_SPR\""
+			: string.Empty;
+
+		string Prefix = Settings.bUseMPrefix
+			? "M"
 			: string.Empty;
 
 #if WITH_DEBUG
@@ -28,10 +35,36 @@ public class Entry
 		Console.WriteLine(SourceSisId);
 #endif // WITH_DEBUG
 		
-		string RetVal = $"{{\"course_sis_id\": \"{Formatted}_U_2024_AUT\",\"name\": \"{ForceCode} Introduction to Leganto Automation\",\"faculty\": \"FEIT\",\"start_date\": \"2024-02-28\",\"end_date\": \"2025-02-28\",\"year\": \"2024\",\"instructors\": [\"Instructor1\",\"Instructor2\"],\"study_package_codes\": [\"StudyPackageCodes\"]{SourceSisId}}}";
+		string RetVal = $"{{\"course_sis_id\": \"{Prefix}{Formatted}_U_2024_AUT\",\"name\": \"{ForceCode} Introduction to Leganto Automation\",\"faculty\": \"FEIT\",\"start_date\": \"2024-02-28\",\"end_date\": \"2025-02-28\",\"year\": \"2024\",\"instructors\": [\"Instructor1\",\"Instructor2\"],\"study_package_codes\": [\"StudyPackageCodes\"]{SourceSisId}}}";
 
 		Console.WriteLine(RetVal);
 		
 		return 0;
+	}
+
+	static void ProcessArguments(string[] Args, ref Settings Settings) {
+		foreach (string V in Args)
+		{
+			switch (V)
+			{
+				case "__NO_SOURCE__":
+					Settings.bUseSourceSisId = false;
+					break;
+				case "__WITH_PREFIX__":
+					Settings.bUseMPrefix = true;
+					break;
+			}
+		}
+	}
+
+}
+
+struct Settings {
+	public bool bUseSourceSisId;
+	public bool bUseMPrefix;
+
+	public void SetDefaults() {
+		bUseSourceSisId = true;
+		bUseMPrefix = false;
 	}
 }
