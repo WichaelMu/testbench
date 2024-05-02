@@ -3,11 +3,10 @@ import sys;
 import subprocess as zsh;
 
 def exec():
-    argv = "".join(sys.argv);
-    
+    argv = " ".join(sys.argv);
     print();
 
-    DiffStr = argv
+    DiffStr = argv;
     
     IntPtr = 0;
     FNames = "";
@@ -15,7 +14,7 @@ def exec():
         t_FName = F"{str (IntPtr)}.descdiff";
 
         f = open (F"{t_FName}", "w");
-        f.write (t.replace("\n", ""));
+        f.write (t);
         f.close ();
 
         IntPtr = IntPtr + 1;
