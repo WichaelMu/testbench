@@ -27,15 +27,19 @@ public class Entry
 			? "M"
 			: string.Empty;
 
+		string SubjectId = Settings.bUseCustomSubjectId
+			? GetParameterAfterOption(Args, "__CUSTOM_SUBJECT_ID__", ForceCode)
+			: ForceCode;
+
 #if WITH_DEBUG
 		foreach (string s in Args)
 			Console.WriteLine(s);
 
-		Console.WriteLine(bUseSourceSisId);
+		Console.WriteLine(Settings.bUseSourceSisId);
 		Console.WriteLine(SourceSisId);
 #endif // WITH_DEBUG
 		
-		string RetVal = $"{{\"course_sis_id\": \"{Prefix}{Formatted}_U_2024_AUT\",\"name\": \"{ForceCode} Introduction to Leganto Automation\",\"faculty\": \"FEIT\",\"start_date\": \"2024-02-28\",\"end_date\": \"2025-02-28\",\"year\": \"2024\",\"instructors\": [\"Instructor1\",\"Instructor2\"],\"study_package_codes\": [\"StudyPackageCodes\"]{SourceSisId}}}";
+		string RetVal = $"{{\"course_sis_id\": \"{Prefix}{Formatted}_U_2024_AUT\",\"name\": \"{SubjectId} Introduction to Leganto Automation - MW\",\"faculty\": \"FEIT\",\"start_date\": \"2024-02-28\",\"end_date\": \"2025-02-28\",\"year\": \"2024\",\"instructors\": [\"Instructor1\",\"Instructor2\"],\"study_package_codes\": [\"StudyPackageCodes\"]{SourceSisId}}}";
 
 		Console.WriteLine(RetVal);
 		
@@ -53,8 +57,19 @@ public class Entry
 				case "__WITH_PREFIX__":
 					Settings.bUseMPrefix = true;
 					break;
+				case "__CUSTOM_SUBJECT_ID__":
+					Settings.bUseCustomSubjectId = true;
+					break;
 			}
 		}
+	}
+
+	static string GetParameterAfterOption(string[] Args, string Option, string Default)
+	{
+		for (int i = 0; i < Args.Length - 1; ++i)
+			if (Args[i] == Option)
+				return Args[i + 1];
+		return Default;
 	}
 
 }
@@ -62,9 +77,11 @@ public class Entry
 struct Settings {
 	public bool bUseSourceSisId;
 	public bool bUseMPrefix;
+	public bool bUseCustomSubjectId;
 
 	public void SetDefaults() {
 		bUseSourceSisId = true;
 		bUseMPrefix = false;
+		bUseCustomSubjectId = false;
 	}
 }
