@@ -3,8 +3,8 @@
 import pandas as pd
 
 # Load the two CSV files into Pandas dataframes
-df1 = pd.read_csv ('diff1.csv')
-df2 = pd.read_csv ('diff2.csv')
+df1 = pd.read_csv ('d1.csv', encoding='utf-16')
+df2 = pd.read_csv ('d2.csv', encoding='uts-16')
 
 # Ensure the columns are in the same order for comparison
 df1 = df1[df2.columns]
