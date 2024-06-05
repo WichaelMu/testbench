@@ -7,6 +7,8 @@ UTS' infrastructure and operations.
 
 If you're wondering and you still care, the home for this repository is:
 [WichaelMu/testbench](https://github.com/WichaelMu/testbench)
+* This repository is private. If you want access, you can go and get fucked -
+keep doing your manual shit.
 
 ## What is this?
 
