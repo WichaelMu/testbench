@@ -50,7 +50,7 @@ public class Entry
 		Console.WriteLine(SourceSisId);
 #endif // WITH_DEBUG
 		
-		string RetVal = $"{{\"course_sis_id\": \"{Prefix}{Formatted}_U_2024_AUT\",\"name\": \"{SubjectId} Leganto Automation - {TimeNow} - MW\",\"faculty\": \"FEIT\",\"start_date\": \"2024-02-28\",\"end_date\": \"2025-02-28\",\"year\": \"2024\",\"instructors\": [\"Instructor1\",\"Instructor2\"],\"study_package_codes\": [\"StudyPackageCodes\"]{SourceSisId}}}";
+		string RetVal = $"{{\"course_sis_id\": \"{Prefix}{Formatted}_U_2024_AUT\",\"name\": \"{ForceCode} Leganto Automation - {TimeNow} - MW\",\"faculty\": \"FEIT\",\"start_date\": \"2024-02-28\",\"end_date\": \"2025-02-28\",\"year\": \"2024\",\"instructors\": [\"Instructor1\",\"Instructor2\"],\"study_package_codes\": [\"{SubjectId}\"]{SourceSisId}}}";
 
 		Console.WriteLine(RetVal);
 		
