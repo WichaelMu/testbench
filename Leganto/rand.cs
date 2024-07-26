@@ -28,19 +28,23 @@ public class Entry
 			if (V == "__HELP__" || V == "?")
 				return 0;
 
+		string Prefix = Settings.bUseMPrefix
+			? "M"
+			: string.Empty;
+
+		string CourseSisId = Settings.bForceCourse
+			? GetParameterAfterOption(Args, "__FORCE_COURSE__", $"{Prefix}{Formatted}_U_2024_AUT")
+			: $"{Prefix}{Formatted}_U_2024_AUT";
+
 		string SourceSisId = Settings.bUseSourceSisId
 			? Settings.bUseGeneratedSource
 				? $",\"source_sis_id\": \"{Formatted}_U_2023_SPR\""
 				: $",\"source_sis_id\": \"{ForceCode}_U_2023_SPR\""
 			: string.Empty;
 
-		string Prefix = Settings.bUseMPrefix
-			? "M"
-			: string.Empty;
-
 		string SubjectId = Settings.bUseCustomSubjectId
 			? GetParameterAfterOption(Args, "__CUSTOM_SUBJECT_ID__", ForceCode)
-			: ForceCode;
+			: "571100";
 
 #if WITH_DEBUG
 		foreach (string s in Args)
@@ -50,7 +54,7 @@ public class Entry
 		Console.WriteLine(SourceSisId);
 #endif // WITH_DEBUG
 		
-		string RetVal = $"{{\"course_sis_id\": \"{Prefix}{Formatted}_U_2024_AUT\",\"name\": \"{ForceCode} Leganto Automation - {TimeNow} - MW\",\"faculty\": \"FEIT\",\"start_date\": \"2024-02-28\",\"end_date\": \"2025-02-28\",\"year\": \"2024\",\"instructors\": [\"Instructor1\",\"Instructor2\"],\"study_package_codes\": [\"{SubjectId}\"]{SourceSisId}}}";
+		string RetVal = $"{{\"course_sis_id\": \"{CourseSisId}\",\"name\": \"{ForceCode} Leganto Automation - {TimeNow} - MW\",\"faculty\": \"FEIT\",\"start_date\": \"2024-02-28\",\"end_date\": \"2025-02-28\",\"year\": \"2024\",\"instructors\": [\"Instructor1\",\"Instructor2\"],\"study_package_codes\": [\"{SubjectId}\"]{SourceSisId}}}";
 
 		Console.WriteLine(RetVal);
 		
@@ -63,7 +67,8 @@ public class Entry
 			"__NO_SOURCE__ - Omits 'source_sis_id'.",
 			"__RAND_SOURCE__ - Force 'source_sis_id' to use the randomly gen'd value, but keep the custom code in the `name`.",
 			"__WITH_PREFIX__ - Use an M prefix in `course_sis_id`.",
-			"__CUSTOM_SUBJECT_ID__ - Uses a custom Subject ID in `name`."
+			"__CUSTOM_SUBJECT_ID__ - Uses a custom Subject ID in `name`.",
+			"__FORCE_COURSE__ - Forces a custom course_sis_id"
 		};
 
 		StringBuilder SB = new StringBuilder();
@@ -89,6 +94,9 @@ public class Entry
 				case "__CUSTOM_SUBJECT_ID__":
 					Settings.bUseCustomSubjectId = true;
 					break;
+				case "__FORCE_COURSE__":
+					Settings.bForceCourse = true;
+					break;
 				case "__HELP__":
 				case "?":
 					Help();
@@ -112,11 +120,13 @@ struct Settings {
 	public bool bUseGeneratedSource;
 	public bool bUseMPrefix;
 	public bool bUseCustomSubjectId;
+	public bool bForceCourse;
 
 	public void SetDefaults() {
 		bUseSourceSisId = true;
 		bUseGeneratedSource = false;
 		bUseMPrefix = false;
 		bUseCustomSubjectId = false;
+		bForceCourse = false;
 	}
 }

@@ -4,7 +4,7 @@
   "States": {
     "Entry-State-Machine": {
       "Result": {
-        "ConnectionArn": "${leganto_connection_arn}"
+        "ConnectionArn": "arn:aws:events:ap-southeast-2:159851557642:connection/dev_cmm_apigw_oauth2_oidc_connection/11aac925-bdac-4e2e-a152-402038d8551f"
       },
       "ResultPath": "$.Statics",
       "Type": "Pass",
@@ -28,7 +28,7 @@
         }
       },
       "ItemsPath": "$.instructors",
-      "Next": "Generate-New-Course",
+      "Next": "1.Generate-New-Course",
       "Parameters": {
         "InInstructorsArray.$": "$$.Map.Item.Value",
         "Statics.$": "$.Statics"
@@ -36,26 +36,26 @@
       "ResultPath": "$.Reformat",
       "Type": "Map"
     },
-    "Generate-New-Course": {
+    "1.Generate-New-Course": {
       "Catch": [
         {
           "ErrorEquals": [
             "CourseCodeExists"
           ],
-          "Comment": "If CourseCodeExists, we can ignore $.Payload output because it contains a known error. Let Course-Code-Exists handle remaining flow control.",
+          "Comment": "If CourseCodeExists, we can ignore $.Payload output because it contains a known error. Let E.Course-Code-Exists handle remaining flow control.",
           "ResultPath": null,
-          "Next": "Course-Code-Exists"
+          "Next": "E.Course-Code-Exists"
         },
         {
           "ErrorEquals": [
             "States.ALL"
           ],
-          "Next": "Exit-State-Machine"
+          "Next": "Log-Error-Report-To-CAT"
         }
       ],
       "Next": "Receive-Course-Creation",
       "Parameters": {
-        "FunctionName": "${leganto_4xx_responder_arn}",
+        "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_4xx_responder",
         "Payload": {
           "ApiEndpoint": "/libraries/leganto/courses",
           "RequestType": "POST",
@@ -84,12 +84,12 @@
       },
       "Type": "Task"
     },
-    "Course-Code-Exists": {
+    "E.Course-Code-Exists": {
       "Comment": "Fetch existing Course Code and continue Runtime. This state is functionally useless.",
       "Type": "Pass",
-      "Next": "Get-Existing-Course-Code"
+      "Next": "E.Get-Existing-Course-Code"
     },
-    "Get-Existing-Course-Code": {
+    "E.Get-Existing-Course-Code": {
       "Parameters": {
         "ApiEndpoint": "https://data.curriculum.dev.mesh.uts.edu.au/libraries/leganto/courses/",
         "Authentication": {
@@ -130,13 +130,13 @@
               "Variable": "$.GenerateCourse.CreatedCourseId"
             }
           ],
-          "Next": "Check-Source-Null"
+          "Next": "4.Check-Source-Null-Or-Empty"
         }
       ],
       "Default": "Exit-State-Machine",
       "Type": "Choice"
     },
-    "Check-Source-Null": {
+    "4.Check-Source-Null-Or-Empty": {
       "Choices": [
         {
           "And": [
@@ -147,15 +147,26 @@
             {
               "IsNull": false,
               "Variable": "$.source_sis_id"
+            },
+            {
+              "Not": {
+                "StringEquals": "",
+                "Variable": "$.source_sis_id"
+              }
             }
           ],
-          "Next": "Search-Course"
+          "Next": "5.Source-Not-Null-And-Not-Empty"
         }
       ],
-      "Default": "23.Source-Is-Null",
+      "Default": "23.Source-Is-Null-Or-Empty",
       "Type": "Choice"
     },
-    "Search-Course": {
+    "5.Source-Not-Null-And-Not-Empty": {
+      "Comment": "SourceSisId is present, != null, && != ''. This state is here for organisation and is functionally useless.",
+      "Type": "Pass",
+      "Next": "5.Search-Course"
+    },
+    "5.Search-Course": {
       "Catch": [
         {
           "ErrorEquals": [
@@ -213,6 +224,7 @@
       "Type": "Pass"
     },
     "Get-Course-Details": {
+      "Comment": "This step contains parts of 6, 7, and 8 in the Sequence Diagram.",
       "Parameters": {
         "ApiEndpoint.$": "States.Format('https://data.curriculum.dev.mesh.uts.edu.au/libraries/leganto/courses/{}', $.SearchCourse.Id)",
         "Authentication": {
@@ -234,6 +246,7 @@
       "Next": "Get-Course-RL"
     },
     "Get-Course-RL": {
+      "Comment": "This step contains parts of 6, 7, and 8 in the Sequence Diagram.",
       "Parameters": {
         "ApiEndpoint.$": "States.Format('https://data.curriculum.dev.mesh.uts.edu.au/libraries/leganto/courses/{}/reading-lists', $.SearchCourse.Id)",
         "Authentication": {
@@ -253,6 +266,7 @@
       "Next": "Combine-Course-Details"
     },
     "Combine-Course-Details": {
+      "Comment": "This step is comprised of 6, 7, and 8 in the Sequence Diagram. They were formed in some previous States.",
       "Parameters": {
         "Code.$": "$.CourseDetailsCore.Code",
         "Id.$": "$.CourseDetailsCore.Id",
@@ -346,9 +360,9 @@
           "ExecutionType": "STANDARD",
           "Mode": "DISTRIBUTED"
         },
-        "StartAt": "NoRLGet-Subjects",
+        "StartAt": "9.NoRLGet-Subjects",
         "States": {
-          "NoRLGet-Subjects": {
+          "9.NoRLGet-Subjects": {
             "Parameters": {
               "ApiEndpoint.$": "States.Format('https://data.curriculum.dev.mesh.uts.edu.au/subjects/{}', $.InNoRLSPC)",
               "Authentication": {
@@ -384,13 +398,14 @@
                     "Variable": "$.NoRLSubjects.Count"
                   }
                 ],
-                "Next": "NoRLPost-RL"
+                "Next": "11.NoRLPost-RL"
               }
             ],
             "Default": "NoRLExit-State-Machine",
             "Type": "Choice"
           },
-          "NoRLPost-RL": {
+          "11.NoRLPost-RL": {
+            "Comment": "Step 10 in the Sequence Diagram is performed in this State; within the dedicated Lambda.",
             "Catch": [
               {
                 "ErrorEquals": [
@@ -414,7 +429,7 @@
               }
             ],
             "Parameters": {
-              "FunctionName": "${leganto_4xx_responder_arn}",
+              "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_4xx_responder",
               "Payload": {
                 "ApiEndpoint.$": "States.Format('/libraries/leganto/courses/{}/reading-lists', $.GenerateCourse.CreatedCourseId)",
                 "RequestType": "POST",
@@ -598,7 +613,7 @@
               }
             ],
             "Parameters": {
-              "FunctionName": "${leganto_citations_poster_arn}",
+              "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_leganto_citations_poster",
               "Payload": {
                 "PostEndpoint.$": "States.Format('/libraries/leganto/courses/{}/reading-lists/{}/citations', $.GenerateCourse.CreatedCourseId, $.OutNoRLPostRL.ReadingListId)",
                 "PostModeDelegate": "ReadingListMissing",
@@ -713,7 +728,7 @@
         }
       ],
       "Parameters": {
-        "FunctionName": "${leganto_4xx_responder_arn}",
+        "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_4xx_responder",
         "Payload": {
           "ApiEndpoint.$": "States.Format('/libraries/leganto/courses/{}/reading-lists', $.GenerateCourse.CreatedCourseId)",
           "RequestType": "POST",
@@ -913,7 +928,7 @@
         }
       ],
       "Parameters": {
-        "FunctionName": "${leganto_citations_poster_arn}",
+        "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_leganto_citations_poster",
         "Payload": {
           "PostEndpoint.$": "States.Format('/libraries/leganto/courses/{}/reading-lists/{}/citations', $.GenerateCourse.CreatedCourseId, $.PostReadingList.Id)",
           "PostModeDelegate": "ReadingListPresent",
@@ -1000,7 +1015,7 @@
               }
             ],
             "Parameters": {
-              "FunctionName": "${leganto_4xx_responder_arn}",
+              "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_4xx_responder",
               "Payload": {
                 "ApiEndpoint.$": "States.Format('/libraries/leganto/courses/{}/reading-lists', $.GenerateCourse.CreatedCourseId)",
                 "RequestType": "POST",
@@ -1183,7 +1198,7 @@
               }
             ],
             "Parameters": {
-              "FunctionName": "${leganto_citations_poster_arn}",
+              "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_leganto_citations_poster",
               "Payload": {
                 "PostEndpoint.$": "States.Format('/libraries/leganto/courses/{}/reading-lists/{}/citations', $.GenerateCourse.CreatedCourseId, $.OutPostRL.ReadingListId)",
                 "PostModeDelegate": "ReadingListPresentPhase2",
@@ -1241,32 +1256,397 @@
       "Type": "Map",
       "Next": "Branch-Exit-Status"
     },
-    "23.Source-Is-Null": {
-      "Comment": "SourceSisId is null or not present. This state is here for organisation and is functionally useless.",
+    "23.Source-Is-Null-Or-Empty": {
+      "Comment": "SourceSisId is null or not present or empty. This state is here for organisation and is functionally useless.",
       "Type": "Pass",
-      "Next": "NoRLDetermine-Course-Code-To-Use"
+      "Next": "NSIterateSPC"
     },
-    
+    "NSIterateSPC": {
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "ExecutionType": "STANDARD",
+          "Mode": "DISTRIBUTED"
+        },
+        "StartAt": "23.NSGet-Subjects",
+        "States": {
+          "23.NSGet-Subjects": {
+            "Parameters": {
+              "ApiEndpoint.$": "States.Format('https://data.curriculum.dev.mesh.uts.edu.au/subjects/{}', $.InNSSPC)",
+              "Authentication": {
+                "ConnectionArn.$": "$.Statics.ConnectionArn"
+              },
+              "Headers": {
+                "Accept": "application/json"
+              },
+              "Method": "GET",
+              "QueryParameters": {
+                "debug_empty_arrays": true
+              }
+            },
+            "Resource": "arn:aws:states:::http:invoke",
+            "ResultPath": "$.NSSubjects",
+            "ResultSelector": {
+              "Count.$": "$.ResponseBody._meta.count",
+              "Subject.$": "$.ResponseBody.subjects[0]"
+            },
+            "Type": "Task",
+            "Next": "NSValidate-Subject"
+          },
+          "NSValidate-Subject": {
+            "Choices": [
+              {
+                "And": [
+                  {
+                    "IsPresent": true,
+                    "Variable": "$.NSSubjects.Count"
+                  },
+                  {
+                    "NumericGreaterThan": 0,
+                    "Variable": "$.NSSubjects.Count"
+                  }
+                ],
+                "Next": "NSLoop-Learning-Resources"
+              }
+            ],
+            "Default": "NSExit-State-Machine-Outer",
+            "Type": "Choice"
+          },
+          "NSLoop-Learning-Resources": {
+            "Type": "Map",
+            "Iterator": {
+              "StartAt": "26.NSPost-RL",
+              "States": {
+                "26.NSPost-RL": {
+                  "Comment": "Step 10 in the Sequence Diagram is performed in this State; within the dedicated Lambda.",
+                  "Catch": [
+                    {
+                      "ErrorEquals": [
+                        "ReadingListExists"
+                      ],
+                      "Comment": "If RLExists, we can ignore $.Payload output because it contains a known error. Let NoRLReading-List-Exists handle remaining flow control.",
+                      "ResultPath": null,
+                      "Next": "NSReading-List-Exists"
+                    },
+                    {
+                      "ErrorEquals": [
+                        "CourseNotFound"
+                      ],
+                      "Next": "NSImplication-Of-Error-In-Integration"
+                    },
+                    {
+                      "ErrorEquals": [
+                        "States.ALL"
+                      ],
+                      "Next": "NSLog-Error-Report-To-CAT"
+                    }
+                  ],
+                  "Parameters": {
+                    "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_4xx_responder",
+                    "Payload": {
+                      "ApiEndpoint.$": "States.Format('/libraries/leganto/courses/{}/reading-lists', $.GenerateCourse.CreatedCourseId)",
+                      "RequestType": "POST",
+                      "RequestBody": {
+                        "code.$": "States.Format('{}_RL', $.course_sis_id)",
+                        "name.$": "$.name",
+                        "status": {
+                          "value": "COMPLETE"
+                        }
+                      }
+                    }
+                  },
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "ResultPath": "$.OutNSPostRL",
+                  "ResultSelector": {
+                    "ReadingListId.$": "$.Payload.id"
+                  },
+                  "Type": "Task",
+                  "Next": "NSPost-Citations"
+                },
+                "NSReading-List-Exists": {
+                  "Comment": "Fetch existing Course Code and continue Runtime. This state is functionally useless.",
+                  "Type": "Pass",
+                  "Next": "NSGet-Reading-Lists-For-CourseId"
+                },
+                "NSGet-Reading-Lists-For-CourseId": {
+                  "Parameters": {
+                    "ApiEndpoint.$": "States.Format('https://data.curriculum.dev.mesh.uts.edu.au/libraries/leganto/courses/{}/reading-lists', $.CourseCode.Id)",
+                    "Authentication": {
+                      "ConnectionArn.$": "$.Statics.ConnectionArn"
+                    },
+                    "Headers": {
+                      "Accept": "application/json"
+                    },
+                    "Method": "GET"
+                  },
+                  "Resource": "arn:aws:states:::http:invoke",
+                  "ResultPath": "$.OutNSPostRL",
+                  "ResultSelector": {
+                    "ReadingListExisting.$": "$.ResponseBody.reading_list"
+                  },
+                  "Type": "Task",
+                  "Next": "NSRL-Exists-Search-Code"
+                },
+                "NSRL-Exists-Search-Code": {
+                  "ItemProcessor": {
+                    "ProcessorConfig": {
+                      "ExecutionType": "STANDARD",
+                      "Mode": "DISTRIBUTED"
+                    },
+                    "StartAt": "NSCheck-RL-Code",
+                    "States": {
+                      "NSCheck-RL-Code": {
+                        "Type": "Choice",
+                        "Choices": [
+                          {
+                            "StringEqualsPath": "$.InterpolatedCourseSisId",
+                            "Variable": "$.InExistingRLArray.code",
+                            "Next": "NSSet-Continue-With-Citations"
+                          }
+                        ],
+                        "Default": "NSSet-Abort"
+                      },
+                      "NSSet-Continue-With-Citations": {
+                        "Parameters": {
+                          "Id.$": "$.InExistingRLArray.id"
+                        },
+                        "Type": "Pass",
+                        "End": true
+                      },
+                      "NSSet-Abort": {
+                        "Parameters": {
+                          "Id": null
+                        },
+                        "Type": "Pass",
+                        "End": true
+                      }
+                    }
+                  },
+                  "ItemsPath": "$.OutNSPostRL.ReadingListExisting",
+                  "Parameters": {
+                    "InExistingRLArray.$": "$$.Map.Item.Value",
+                    "GenerateCourse.$": "$.GenerateCourse",
+                    "CourseCode.$": "$.CourseCode",
+                    "NoRLSubjects.$": "$.NSSubjects",
+                    "InterpolatedCourseSisId.$": "States.Format('{}_RL', $.course_sis_id)"
+                  },
+                  "ResultPath": "$.FoundSearchCode",
+                  "Type": "Map",
+                  "Next": "NSContains-True"
+                },
+                "NSContains-True": {
+                  "Comment": "A dumb trick to see if an RL array contains at least one non-null value. I.e., find the pre-existing ReadingList.Id.",
+                  "Parameters": {
+                    "Length.$": "States.ArrayLength(States.ArrayUnique($.FoundSearchCode))",
+                    "ZerothElement.$": "States.ArrayGetItem(States.ArrayUnique($.FoundSearchCode), 0)"
+                  },
+                  "ResultPath": "$.DetermineSetValueNS",
+                  "Type": "Pass",
+                  "Next": "NSDetermine-Set"
+                },
+                "NSDetermine-Set": {
+                  "Comment": "A dumb trick cont. Make the array Unique. If the unique array length is 1, we didn't find the pre-existing ReadingList.Id. If 2, we found it!",
+                  "Choices": [
+                    {
+                      "Or": [
+                        {
+                          "NumericEquals": 2,
+                          "Variable": "$.DetermineSetValueNS.Length"
+                        },
+                        {
+                          "And": [
+                            {
+                              "NumericEquals": 1,
+                              "Variable": "$.DetermineSetValueNS.Length"
+                            },
+                            {
+                              "IsNull": false,
+                              "Variable": "$.DetermineSetValueNS.ZerothElement.Id"
+                            }
+                          ]
+                        }
+                      ],
+                      "Next": "NSExtract-Non-Null-RL-Id"
+                    }
+                  ],
+                  "Type": "Choice",
+                  "Default": "NSExit-State-Machine"
+                },
+                "NSExtract-Non-Null-RL-Id": {
+                  "Comment": "A dumb trick cont. Now we need to know if the non-null value is at array index 0 or 1.",
+                  "Choices": [
+                    {
+                      "IsNull": false,
+                      "Variable": "$.DetermineSetValueNS.ZerothElement.Id",
+                      "Next": "NSExtract-Idx0"
+                    }
+                  ],
+                  "Type": "Choice",
+                  "Default": "NSExtract-Idx1"
+                },
+                "NSExtract-Idx0": {
+                  "Parameters": {
+                    "ReadingListId.$": "$.DetermineSetValueNS.ZerothElement.Id"
+                  },
+                  "ResultPath": "$.OutNSPostRL",
+                  "Type": "Pass",
+                  "Next": "NSContinue-With-Citations"
+                },
+                "NSExtract-Idx1": {
+                  "Parameters": {
+                    "ReadingListId.$": "States.ArrayGetItem(States.ArrayUnique($.FoundSearchCode), 1)"
+                  },
+                  "ResultPath": "$.OutNSPostRL",
+                  "Type": "Pass",
+                  "Next": "NSContinue-With-Citations"
+                },
+                "NSContinue-With-Citations": {
+                  "Comment": "Continue with creating Citations. This state is functionally useless.",
+                  "Type": "Pass",
+                  "Next": "NSPost-Citations"
+                },
+                "NSPost-Citations": {
+                  "Catch": [
+                    {
+                      "ErrorEquals": [
+                        "ReadingListNotFound",
+                        "CourseNotFound"
+                      ],
+                      "Comment": "This is an implication of an error in our Integration. We want to keep the exiting $.Payload from the Citations Lambda.",
+                      "ResultPath": "$.Payload",
+                      "Next": "NSImplication-Of-Error-In-Integration"
+                    },
+                    {
+                      "ErrorEquals": [
+                        "States.ALL"
+                      ],
+                      "Comment": "An unknown, undefined, or otherwise unhandled error has occurred. Keep the exiting $.Payload from the Citations Lambda.",
+                      "ResultPath": "$.Payload",
+                      "Next": "NSLog-Error-Report-To-CAT"
+                    }
+                  ],
+                  "Parameters": {
+                    "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_leganto_citations_poster",
+                    "Payload": {
+                      "PostEndpoint.$": "States.Format('/libraries/leganto/courses/{}/reading-lists/{}/citations', $.GenerateCourse.CreatedCourseId, $.OutNSPostRL.ReadingListId)",
+                      "PostModeDelegate": "ReadingListMissing",
+                      "StateInput.$": "$"
+                    }
+                  },
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "ResultPath": null,
+                  "Type": "Task",
+                  "Next": "NSExit-Safe"
+                },
+                "NSLog-Error-Report-To-CAT": {
+                  "Type": "Pass",
+                  "Parameters": {
+                    "ExitType": "Log-Error-Report-To-CAT",
+                    "Message": "A generic error occurred somewhere during this process. Check the Error Logs and/or Lambda Error Logs for more information."
+                  },
+                  "End": true
+                },
+                "NSImplication-Of-Error-In-Integration": {
+                  "Type": "Pass",
+                  "Parameters": {
+                    "ExitType": "Implication-Of-Error-In-Integration",
+                    "Message": "Either/or of 401914 (CourseNotFound) or 401915 (ReadingListNotFound) failed during the creation of Reading Lists or Citations. This implies an error in our Integration and should be logged for technical troubleshooting."
+                  },
+                  "End": true
+                },
+                "NSExit-Safe": {
+                  "Type": "Pass",
+                  "Parameters": {
+                    "ExitType": "Safe",
+                    "Message": "This Step exited correctly."
+                  },
+                  "End": true
+                },
+                "NSExit-State-Machine": {
+                  "Type": "Pass",
+                  "Parameters": {
+                    "ExitType": "Exit-State-Machine",
+                    "Message": "This Step Function has been ordered to Exit. This is likely because an impossible scenario suddenly became possible, or an unhandled error occurred."
+                  },
+                  "End": true
+                }
+              }
+            },
+            "ItemsPath": "$.NSSubjects.Subject.learning_resource",
+            "Parameters": {
+              "InNSLR.$": "$$.Map.Item.Value",
+              "CourseCode.$": "$.CourseCode",
+              "GenerateCourse.$": "$.GenerateCourse",
+              "course_sis_id.$": "$.course_sis_id",
+              "name.$": "$.name",
+              "Statics.$": "$.Statics"
+            },
+            "ResultPath": "$.ExitStatus",
+            "Next": "NSReturn-Exit-Status-Only"
+          },
+          "NSExit-State-Machine-Outer": {
+            "Type": "Pass",
+            "Parameters": {
+              "ExitType": "Exit-State-Machine",
+              "Message": "This Step Function has been ordered to Exit. This is likely because an impossible scenario suddenly became possible, or an unhandled error occurred."
+            },
+            "Next": "NSReturn-Exit-Status-Only"
+          },
+          "NSReturn-Exit-Status-Only": {
+            "Type": "Pass",
+            "ResultPath": "$.ExitStatus",
+            "End": true
+          }
+        }
+      },
+      "ItemsPath": "$.study_package_codes",
+      "Parameters": {
+        "InNSSPC.$": "$$.Map.Item.Value",
+        "GenerateCourse.$": "$.GenerateCourse",
+        "course_sis_id.$": "$.course_sis_id",
+        "name.$": "$.name",
+        "Statics.$": "$.Statics"
+      },
+      "ResultPath": "$.ExitStatus",
+      "Type": "Map",
+      "Next": "Branch-Exit-Status"
+    },
     "Branch-Exit-Status": {
-      "Choices": [
+      "Catch": [
         {
-          "StringEquals": "Log-Error-Report-To-CAT",
-          "Variable": "$.ExitStatus[0].ExitType",
+          "ErrorEquals": [
+            "LogErrorReportToCAT"
+          ],
+          "Comment": "An unknown, undefined, or otherwise unhandled error has occurred. Keep the exiting $.Payload from the Exit Status Lambda.",
+          "ResultPath": "$.Payload",
           "Next": "Log-Error-Report-To-CAT"
         },
         {
-          "StringEquals": "Implication-Of-Error-In-Integration",
-          "Variable": "$.ExitStatus[0].ExitType",
+          "ErrorEquals": [
+            "ImplicationOfErrorInIntegration"
+          ],
+          "Comment": "An unknown, undefined, or otherwise unhandled error has occurred. Keep the exiting $.Payload from the Exit Status Lambda.",
+          "ResultPath": "$.Payload",
           "Next": "Implication-Of-Error-In-Integration"
         },
         {
-          "StringEquals": "Exit-State-Machine",
-          "Variable": "$.ExitStatus[0].ExitType",
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Comment": "An unknown, undefined, or otherwise unhandled error has occurred. Keep the exiting $.Payload from the Exit Status Lambda.",
+          "ResultPath": "$.Payload",
           "Next": "Exit-State-Machine"
         }
       ],
-      "Default": "Report-Completion-To-CAT",
-      "Type": "Choice"
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:ap-southeast-2:159851557642:function:dev_leganto_state_function_leganto_exit_status",
+        "Payload": {
+          "StateInput.$": "$"
+        }
+      },
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Type": "Task",
+      "ResultPath": "$.ExitStatus",
+      "Next": "Report-Completion-To-CAT"
     },
     "Exit-State-Machine": {
       "Type": "Pass",
@@ -1286,4 +1666,4 @@
       "Next": "Exit-State-Machine"
     }
   }
-}aa
+}
