@@ -42,6 +42,10 @@ public class Entry
 				: $",\"source_sis_id\": \"{ForceCode}_U_2023_SPR\""
 			: string.Empty;
 
+		SourceSisId = Settings.bUseCustomSourceSisId
+			? $",\"source_sis_id\": \"{GetParameterAfterOption (Args, "__CUSTOM_SOURCE__", SourceSisId)}\""
+			: SourceSisId;
+
 		string SubjectId = Settings.bUseCustomSubjectId
 			? GetParameterAfterOption(Args, "__CUSTOM_SUBJECT_ID__", ForceCode)
 			: "571100";
@@ -68,7 +72,8 @@ public class Entry
 			"__RAND_SOURCE__ - Force 'source_sis_id' to use the randomly gen'd value, but keep the custom code in the `name`.",
 			"__WITH_PREFIX__ - Use an M prefix in `course_sis_id`.",
 			"__CUSTOM_SUBJECT_ID__ - Uses a custom Subject ID in `name`.",
-			"__FORCE_COURSE__ - Forces a custom course_sis_id"
+			"__FORCE_COURSE__ - Forces a custom course_sis_id",
+			"__CUSTOM_SOURCE__ - Forces a custom source_sis_id"
 		};
 
 		StringBuilder SB = new StringBuilder();
@@ -97,6 +102,9 @@ public class Entry
 				case "__FORCE_COURSE__":
 					Settings.bForceCourse = true;
 					break;
+				case "__CUSTOM_SOURCE__":
+					Settings.bUseCustomSourceSisId = true;
+					break;
 				case "__HELP__":
 				case "?":
 					Help();
@@ -121,6 +129,7 @@ struct Settings {
 	public bool bUseMPrefix;
 	public bool bUseCustomSubjectId;
 	public bool bForceCourse;
+	public bool bUseCustomSourceSisId;
 
 	public void SetDefaults() {
 		bUseSourceSisId = true;
@@ -128,5 +137,6 @@ struct Settings {
 		bUseMPrefix = false;
 		bUseCustomSubjectId = false;
 		bForceCourse = false;
+		bUseCustomSourceSisId = false;
 	}
 }

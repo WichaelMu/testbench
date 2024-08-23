@@ -1,0 +1,2054 @@
+13c13
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+29c29,31
+<             <Notes />
+---
+>             <Notes>
+>                 <p>Notes</p>
+>             </Notes>
+41c43
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+71c73
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+94a97,119
+>             <Code>ROT280824</Code>
+>             <CourseCode>Roll over test</CourseCode>
+>             <CourseLevelCode>UG</CourseLevelCode>
+>             <CourseLevelName>Undergraduate</CourseLevelName>
+>             <CourseTypeCode>BD</CourseTypeCode>
+>             <CourseTypeName>Bachelor's Degree</CourseTypeName>
+>             <CourseVersion />
+>             <OwnerOrganisationCode>L</OwnerOrganisationCode>
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+>             <CoursePackageClassification>Full Degree</CoursePackageClassification>
+>             <CRICOS />
+>             <Title>Roll over test</Title>
+>             <EnglishRequirements />
+>             <EntryRequirements />
+>             <Duration>3</Duration>
+>             <DurationType>Year(s)</DurationType>
+>             <TotalCreditPoints>144</TotalCreditPoints>
+>             <AttendanceModeID />
+>             <AttendanceMode />
+>             <Notes />
+>             <StudyOptions />
+>         </Course>
+>         <Course>
+103c128
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+112c137
+<             <AttendanceModeID>BLC</AttendanceModeID>
+---
+>             <AttendanceModeID>EXT</AttendanceModeID>
+126c151
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+149c174
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+175c200
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+198c223
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+229c254
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+252c277
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+279c304
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+302c327
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+330c355
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+358c383
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+391c416
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+418c443
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+445c470
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+481c506
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+511c536
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+543c568
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+584c609
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+617c642
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+644c669
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+671c696
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+698c723
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+730c755
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+766c791
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+796c821
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+825c850
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+853c878
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+882c907
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+913c938
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+941c966
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+970c995
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+1001c1026
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1028c1053
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1055c1080
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1082c1107
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1114c1139
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1141c1166
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+1169c1194
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+1197c1222
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+1227c1252
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+1260c1285
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+1298c1323
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+1327c1352
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+1359c1384
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+1399c1424
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+1428c1453
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+1458c1483
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1488c1513
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1515c1540
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+1549c1574
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+1563c1588
+<             <AttendanceModeID>BLC</AttendanceModeID>
+---
+>             <AttendanceModeID>EXT</AttendanceModeID>
+1579c1604
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+1611c1636
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+1643c1668
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+1681c1706
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1708c1733
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1735c1760
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1762c1787
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+1797c1822
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+1837c1862
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1865c1890
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1893c1918
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1923c1948
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1953c1978
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+1980c2005
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+2011c2036
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+2047c2072
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+2083c2108
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+2113c2138
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+2149c2174
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+2185c2210
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+2221c2246
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+2251c2276
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+2285c2310
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+2326c2351
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+2354c2379
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+2382c2407
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+2413c2438
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+2443c2468
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+2474c2499
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+2503c2528
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+2534c2559
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+2567c2592
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+2602c2627
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+2638c2663
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+2672c2697
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+2706c2731
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+2738c2763
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+2770c2795
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+2802c2827
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+2830c2855
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+2858c2883
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+2887c2912
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+2917c2942
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+2951c2976
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+2984c3009
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+3011c3036
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+3038c3063
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+3066c3091
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+3100c3125
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+3131c3156
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+3158c3183
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+3188c3213
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+3230c3255
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+3261c3286
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+3291c3316
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+3320c3345
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+3352c3377
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+3384c3409
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+3407c3432
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+3430c3455
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+3463c3488
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+3488c3513
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+3513c3538
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+3538c3563
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+3563c3588
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+3588c3613
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+3617c3642
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+3650c3675
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+3675c3700
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+3708c3733
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+3733c3758
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+3758c3783
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+3787c3812
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+3812c3837
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+3847c3872
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+3882c3907
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+3913c3938
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+3939c3964
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+3973c3998
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+4001c4026
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+4032c4057
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+4064c4089
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+4089c4114
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+4115c4140
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4140c4165
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4167c4192
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4194c4219
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4221c4246
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4244c4269
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+4272c4297
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+4297c4322
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4324c4349
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+4356c4381
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+4381c4406
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4408c4433
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+4438c4463
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+4469c4494
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+4494c4519
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4521c4546
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+4549c4574
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+4577c4602
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4602c4627
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+4627c4652
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+4652c4677
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4679c4704
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+4709c4734
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+4737c4762
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4763c4788
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4789c4814
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4815c4840
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+4840c4865
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+4863c4888
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+4886c4911
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+4909c4934
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+4918,4919c4943,4944
+<             <AttendanceModeID>BLC</AttendanceModeID>
+<             <AttendanceMode>Distance</AttendanceMode>
+---
+>             <AttendanceModeID>INT</AttendanceModeID>
+>             <AttendanceMode>On campus - Block</AttendanceMode>
+4932c4957
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+4960c4985
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+4987c5012
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+5018c5043
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+5046c5071
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5073c5098
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5102c5127
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5130c5155
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5159c5184
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5187c5212
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5216c5241
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5243c5268
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5272c5297
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5299c5324
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+5326c5351
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5351c5376
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5376c5401
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5401c5426
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5426c5451
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5451c5476
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5476c5501
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5501c5526
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5526c5551
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5551c5576
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5576c5601
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5601c5626
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5626c5651
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5652c5677
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5677c5702
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+5705c5730
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5732c5757
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5757c5782
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+5782c5807
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5809c5834
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+5838c5863
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+5866c5891
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+5891c5916
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+5918c5943
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+5943c5968
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+5968c5993
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+5993c6018
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+6018c6043
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+6043c6068
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+6068c6093
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+6093c6118
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+6118c6143
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+6143c6168
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+6168c6193
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+6193c6218
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+6219c6244
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+6244c6269
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+6269c6294
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+6294c6319
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+6319c6344
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+6344c6369
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+6371c6396
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+6396c6421
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+6421c6446
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+6446c6471
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+6471c6496
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+6496c6521
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+6505c6530
+<             <Duration />
+---
+>             <Duration>5.0</Duration>
+6524c6549
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+6549c6574
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+6574c6599
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+6602c6627
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+6632c6657
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+6663c6688
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+6688c6713
+<             <OwnerOrganisationName>Design, Architecture and Building</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Design, Architecture and Building</OwnerOrganisationName>
+6714c6739
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+6743c6768
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+6780c6805
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+6812c6837
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+6835c6860
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+6862c6887
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+6885c6910
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+6914c6939
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+6941c6966
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+6964c6989
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+6997c7022
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+7026c7051
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7053c7078
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7080c7105
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7105c7130
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7128c7153
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7155c7180
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7178c7203
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+7201c7226
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7228c7253
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+7261c7286
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7284c7309
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+7307c7332
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+7339c7364
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+7369c7394
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+7398c7423
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7425c7450
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7455c7480
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+7482c7507
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+7510c7535
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+7540c7565
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+7567c7592
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+7596c7621
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+7623c7648
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+7653c7678
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+7683c7708
+<             <OwnerOrganisationName>Design, Architecture and Building</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Design, Architecture and Building</OwnerOrganisationName>
+7713c7738
+<             <OwnerOrganisationName>Design, Architecture and Building</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Design, Architecture and Building</OwnerOrganisationName>
+7743c7768
+<             <OwnerOrganisationName>Design, Architecture and Building</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Design, Architecture and Building</OwnerOrganisationName>
+7773c7798
+<             <OwnerOrganisationName>Design, Architecture and Building</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Design, Architecture and Building</OwnerOrganisationName>
+7803c7828
+<             <OwnerOrganisationName>Design, Architecture and Building</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Design, Architecture and Building</OwnerOrganisationName>
+7834c7859
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+7861c7886
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+7888c7913
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+7916c7941
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+7946c7971
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+7973c7998
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+8000c8025
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+8032c8057
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+8062c8087
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+8089c8114
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+8116c8141
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+8143c8168
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+8173c8198
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+8200c8225
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+8227c8252
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8255c8280
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+8282c8307
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8311c8336
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8340c8365
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8369c8394
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8398c8423
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8427c8452
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8456c8481
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8485c8510
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8514c8539
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8543c8568
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8572c8597
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8601c8626
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8630c8655
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8658c8683
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8686c8711
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8713c8738
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8741c8766
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+8769c8794
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+8796c8821
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+8823c8848
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+8850c8875
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+8877c8902
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+8904c8929
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+8931c8956
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+8958c8983
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+8985c9010
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+9014c9039
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+9041c9066
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+9068c9093
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9096c9121
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+9123c9148
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+9153c9178
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+9182c9207
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9212c9237
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9243c9268
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9272c9297
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+9302c9327
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+9329c9354
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+9356c9381
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+9386c9411
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+9413c9438
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9440c9465
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9467c9492
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9494c9519
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9523c9548
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9552c9577
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9579c9604
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9606c9631
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9634c9659
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+9661c9686
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+9690c9715
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+9720c9745
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9747c9772
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9774c9799
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9801c9826
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+9829c9854
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+9856c9881
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+9882c9907
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+9909c9934
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+9936c9961
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+9963c9988
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+9995c10020
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+10022c10047
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+10049c10074
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+10076c10101
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+10103c10128
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+10135c10160
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+10164c10189
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+10193c10218
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+10220c10245
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+10248c10273
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10271c10296
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10303c10328
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10334c10359
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10365c10390
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10388c10413
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10413c10438
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10438c10463
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+10459a10485,10513
+>             <Code>C111234</Code>
+>             <CourseCode>Roadshow Demo - new course</CourseCode>
+>             <CourseLevelCode>UG</CourseLevelCode>
+>             <CourseLevelName>Undergraduate</CourseLevelName>
+>             <CourseTypeCode>BD</CourseTypeCode>
+>             <CourseTypeName>Bachelor's Degree</CourseTypeName>
+>             <CourseVersion>1</CourseVersion>
+>             <OwnerOrganisationCode>L</OwnerOrganisationCode>
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+>             <CoursePackageClassification>Full Degree</CoursePackageClassification>
+>             <CRICOS>063721A</CRICOS>
+>             <Title>Roadshow Demo - new course</Title>
+>             <EnglishRequirements>English proficiency requirement is: IELTS Academic: overall 6.5, writing 6.0; or TOEFL internet based: overall 79, writing 21; or UTS College AE5: Pass; or Pearson PTE: overall 58, writing 50; or Cambridge C1A/C2P: overall 176, writing 169</EnglishRequirements>
+>             <EntryRequirements>
+>                 <p>Applicants must have completed an Australian Year 12 qualification, Australian Qualifications Framework Diploma, or equivalent Australian or overseas qualification at the required level.</p>
+>                 <p>Applicants must have successfully completed the UTS College Diploma of Business, with no more than two subject failures in the course. Further information about admission requirements, including English language requirements, for the UTS College Diploma of Business, is available from UTS College.</p>
+>                 <p>Eligibility for admission does not guarantee offer of a place.</p>
+>             </EntryRequirements>
+>             <Duration>3</Duration>
+>             <DurationType>Year(s)</DurationType>
+>             <TotalCreditPoints>144</TotalCreditPoints>
+>             <AttendanceModeID>INT</AttendanceModeID>
+>             <AttendanceMode>On campus – Weekly</AttendanceMode>
+>             <Notes>
+>                 <p>This course is only offered offshore. It is available in Shanghai. The language of tuition is English.</p>
+>             </Notes>
+>             <StudyOptions />
+>         </Course>
+>         <Course>
+10468c10522
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+10493c10547
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+10499c10553
+<             <Duration />
+---
+>             <Duration>5.0</Duration>
+10516c10570
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+10539c10593
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10570c10624
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10600c10654
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+10630c10684
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+10658c10712
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+10689c10743
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+10743c10797
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+10775c10829
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+10805c10859
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+10838c10892
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+10863c10917
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+10892c10946
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+10921c10975
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+10951c11005
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+10981c11035
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+11011c11065
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+11040c11094
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+11069c11123
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+11097c11151
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+11122c11176
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+11155c11209
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+11187c11241
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+11218c11272
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+11250c11304
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+11275c11329
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+11305c11359
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+11334c11388
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+11363c11417
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+11388c11442
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+11417c11471
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+11446c11500
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+11476c11530
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+11501c11555
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+11536c11590
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+11567c11621
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+11596c11650
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+11631c11685
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+11661c11715
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+11691c11745
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+11724c11778
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+11758c11812
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+11786c11840
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+11811c11865
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+11845c11899
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+11878c11932
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+11893,11894c11947,11948
+<             <AttendanceModeID>OLN</AttendanceModeID>
+<             <AttendanceMode>Online</AttendanceMode>
+---
+>             <AttendanceModeID>INT</AttendanceModeID>
+>             <AttendanceMode>On campus – Weekly</AttendanceMode>
+11909c11963
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+11940c11994
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+11971c12025
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+12001c12055
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+12031c12085
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+12063c12117
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+12093c12147
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+12126c12180
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+12163c12217
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+12200c12254
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+12236c12290
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+12270c12324
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+12285,12286c12339,12340
+<             <AttendanceModeID>BLC</AttendanceModeID>
+<             <AttendanceMode>On campus – Weekly</AttendanceMode>
+---
+>             <AttendanceModeID>INT</AttendanceModeID>
+>             <AttendanceMode>On campus - Block</AttendanceMode>
+12301c12355
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+12333c12387
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+12362c12416
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+12387c12441
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+12419c12473
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+12449c12503
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+12476c12530
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+12507c12561
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+12539c12593
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+12556,12557c12610,12611
+<             <AttendanceModeID>OLN</AttendanceModeID>
+<             <AttendanceMode>Online</AttendanceMode>
+---
+>             <AttendanceModeID>INT</AttendanceModeID>
+>             <AttendanceMode>On campus – Weekly</AttendanceMode>
+12574c12628
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+12591,12592c12645,12646
+<             <AttendanceModeID>OLN</AttendanceModeID>
+<             <AttendanceMode>Online</AttendanceMode>
+---
+>             <AttendanceModeID>INT</AttendanceModeID>
+>             <AttendanceMode>On campus – Weekly</AttendanceMode>
+12609c12663
+<             <OwnerOrganisationName>Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Health</OwnerOrganisationName>
+12636c12690
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+12653,12654c12707,12708
+<             <AttendanceModeID>OLN</AttendanceModeID>
+<             <AttendanceMode>Online</AttendanceMode>
+---
+>             <AttendanceModeID>INT</AttendanceModeID>
+>             <AttendanceMode>On campus – Weekly</AttendanceMode>
+12667c12721
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+12684,12685c12738,12739
+<             <AttendanceModeID>OLN</AttendanceModeID>
+<             <AttendanceMode>Online</AttendanceMode>
+---
+>             <AttendanceModeID>INT</AttendanceModeID>
+>             <AttendanceMode>On campus – Weekly</AttendanceMode>
+12698c12752
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+12725c12779
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+12742,12743c12796,12797
+<             <AttendanceModeID>OLN</AttendanceModeID>
+<             <AttendanceMode>Online</AttendanceMode>
+---
+>             <AttendanceModeID>INT</AttendanceModeID>
+>             <AttendanceMode>On campus – Weekly</AttendanceMode>
+12756c12810
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+12785c12839
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+12816c12870
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+12846c12900
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+12881c12935
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+12914c12968
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+12924c12978
+<             <Duration />
+---
+>             <Duration>0.5</Duration>
+12941c12995
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+12975c13029
+<             <OwnerOrganisationName>Graduate School of Health</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Graduate School of Health</OwnerOrganisationName>
+13007c13061
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+13038c13092
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+13064c13118
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+13090c13144
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+13116c13170
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+13146c13200
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+13177c13231
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+13207c13261
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+13236c13290
+<             <OwnerOrganisationName>Science</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Science</OwnerOrganisationName>
+13265c13319
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+13273c13327
+<             <Duration />
+---
+>             <Duration>1</Duration>
+13292c13346
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+13315c13369
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+13341c13395
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+13357a13412,13436
+>             <Code>C91248</Code>
+>             <CourseCode>Test BMFWUHHW</CourseCode>
+>             <CourseLevelCode>N</CourseLevelCode>
+>             <CourseLevelName>Non Award</CourseLevelName>
+>             <CourseTypeCode>AD</CourseTypeCode>
+>             <CourseTypeName>Adv. Diploma/Diploma</CourseTypeName>
+>             <CourseVersion />
+>             <OwnerOrganisationCode>G</OwnerOrganisationCode>
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+>             <CoursePackageClassification>Full Degree</CoursePackageClassification>
+>             <CRICOS>123456</CRICOS>
+>             <Title>Automation Course QGHGG</Title>
+>             <EnglishRequirements />
+>             <EntryRequirements>
+>                 <p>Test HTDFZVJEFV</p>
+>             </EntryRequirements>
+>             <Duration>2</Duration>
+>             <DurationType>Year(s)</DurationType>
+>             <TotalCreditPoints>0</TotalCreditPoints>
+>             <AttendanceModeID>EXT</AttendanceModeID>
+>             <AttendanceMode>Distance</AttendanceMode>
+>             <Notes />
+>             <StudyOptions />
+>         </Course>
+>         <Course>
+13366c13445
+<             <OwnerOrganisationName>Arts and Social Sciences</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Arts and Social Sciences</OwnerOrganisationName>
+13392c13471
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
+13442c13521
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+13465c13544
+<             <OwnerOrganisationName>Business</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Business</OwnerOrganisationName>
+13490c13569
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+13513c13592
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+13536c13615
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+13559c13638
+<             <OwnerOrganisationName>Law</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Law</OwnerOrganisationName>
+13582c13661
+<             <OwnerOrganisationName>Engineering and Information Technology</OwnerOrganisationName>
+---
+>             <OwnerOrganisationName>Faculty of Engineering and Information Technology</OwnerOrganisationName>
