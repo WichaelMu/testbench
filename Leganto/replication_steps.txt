@@ -1,0 +1,278 @@
+
+The following outlines steps the I undertook. From my perspective, there is an
+issue or a bug with the Leganto API.
+
+================================================================================
+
+The Course was created by POSTing this to:
+POST https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses
+
+{
+    "code": "MCMMTP_1004_U_2024_SPR",
+    "name": "M - Leganto; CMMTP-1004 Resolution",
+    "academic_department": {
+        "value": "ITU"
+    },
+    "start_date": "2024-02-28",
+    "end_date": "2025-02-28",
+    "instructor": [
+        { "primary_id": "Michael Wu" },
+        { "primary_id": "Please Ignore" }
+    ],
+    "processing_department": {
+        "value": "COURSE_UNIT"
+    },
+    "status": "ACTIVE",
+    "year": "2024"
+}
+
+================================================================================
+
+The Reading List was created by POSTing this to:
+POST https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses/{CourseId}/reading-lists
+
+{
+    "code": "MCMMTP_1004_U_2024_SPR_RL",
+    "name": "M - Leganto; CMMTP-1004 Resolution",
+    "status": { "value": "COMPLETE" }
+}
+
+================================================================================
+
+The Citation was created by POSTing these to:
+	POST https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses/{CourseId}/reading-lists/{ReadingListId}/citations
+
+{
+    "status": {
+        "value": "Complete",
+        "desc": "Complete"
+    },
+    "copyrights_status": {},
+    "secondary_type": {
+        "value": "BK_C",
+        "desc": "Book Chapter"
+    },
+    "type": {
+        "value": "BK",
+        "desc": "Physical Book"
+    },
+    "metadata": {
+        "title": "POSTED BY MICHAEL WU WITH mms_id",
+        "author": "Wichael Mu., Allen, J., Harris, R., Jago, L., Tatrai, A., Jonson, P., & D'Arcy, E.",
+        "publisher": "Wichael Mu, Ltd.",
+        "edition": "Leganto Essentials ed.",
+        "isbn": "9780730369400",
+        "note": "Hopefully the missing fields are added this time. Expecting details related to Chapters, start page, and page, and possibly a call number.",
+        "chapter": "1",
+        "year": "2020",
+        "pages": "432",
+        "source": "https://ebookcentral.proquest.com/lib/uts/reader.action?docID=6727640&ppg=13",
+        "publication_date": "2020",
+        "mms_id": "991006947664405671",
+        "additional_person_name": "Harris, Robert,; Jago, Leo,",
+        "place_of_publication": "Milton, Qld.",
+        "chapter_title": "An overview of the event field",
+        "chapter_author": "Allen, J., Harris, R., Jago, L., Tatrai, A., Jonson, P., & D'Arcy, E.",
+        "start_page": "2",
+        "end_page": "24"
+    }
+}
+
+--------------------------------------------------------------------------------
+
+{
+    "status": {
+        "value": "Complete",
+        "desc": "Complete"
+    },
+    "copyrights_status": {},
+    "secondary_type": {
+        "value": "BK_C",
+        "desc": "Book Chapter"
+    },
+    "type": {
+        "value": "BK",
+        "desc": "Physical Book"
+    },
+    "metadata": {
+        "title": "POSTED BY MICHAEL WU WITH*OUT* mms_id",
+        "author": "Wichael Mu., Allen, J., Harris, R., Jago, L., Tatrai, A., Jonson, P., & D'Arcy, E.",
+        "publisher": "Wichael Mu, Ltd.",
+        "edition": "Leganto Essentials ed.",
+        "isbn": "9780730369400",
+        "note": "Hopefully the missing fields are added this time. Expecting details related to Chapters, start page, and page, and possibly a call number.",
+        "chapter": "1",
+        "year": "2020",
+        "pages": "432",
+        "source": "https://ebookcentral.proquest.com/lib/uts/reader.action?docID=6727640&ppg=13",
+        "publication_date": "2020",
+        "additional_person_name": "Harris, Robert,; Jago, Leo,",
+        "place_of_publication": "Milton, Qld.",
+        "chapter_title": "An overview of the event field",
+        "chapter_author": "Allen, J., Harris, R., Jago, L., Tatrai, A., Jonson, P., & D'Arcy, E.",
+        "start_page": "2",
+        "end_page": "24"
+    }
+}
+
+Note the values and differences between the two POSTed Citations':
+	$.metadata.title
+	$.metadata.author
+	$.metadata.publisher
+	$.metadata.note
+
+================================================================================
+
+Now, when trying to GET the full Reading List and Citations of the newly
+created course, the following is response:
+
+GET https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses/{CourseId}/reading-lists/{ReadingListId}?view=full
+{
+    "id": "14709545720005671",
+    "code": "MCMMTP_1004_U_2024_SPR_RL",
+    "name": "M - Leganto; CMMTP-1004 Resolution",
+    "status": {
+        "value": "COMPLETE"
+    },
+    "syllabus": {},
+    "visibility": {
+        "value": "DRAFT",
+        "desc": "Draft"
+    },
+    "publishingStatus": {
+        "value": "DRAFT",
+        "desc": "Draft"
+    },
+    "note": [],
+    "citations": {
+        "citation": [
+            {
+                "id": "14709545830005671",
+                "status": {
+                    "value": "Complete",
+                    "desc": "Complete"
+                },
+                "copyrights_status": {
+                    "value": "NOTDETERMINED",
+                    "desc": "Not Determined"
+                },
+                "secondary_type": {
+                    "value": "BK_C",
+                    "desc": "Book Chapter"
+                },
+                "type": {
+                    "value": "BK",
+                    "desc": "Physical Book"
+                },
+                "metadata": {
+                    "title": "Festival & special event management essentials ",
+                    "author": "Allen, Johnny,",
+                    "publisher": "John Wiley and Sons Australia Ltd",
+                    "edition": "1.",
+                    "isbn": "9780730369400",
+                    "note": "Multiple formats will be published.; Prepublication record (machine generated from publisher information)",
+                    "year": "2021.",
+                    "pages": "x, 422 pages ;",
+                    "publication_date": "2021.",
+                    "mms_id": "991006947664405671",
+                    "additional_person_name": "Harris, Robert,; Jago, Leo,",
+                    "place_of_publication": "Milton, QLD :"
+                },
+                "leganto_permalink": "https://ap02-psb.alma.exlibrisgroup.com/leganto/readinglist/citation/14709545830005671?institute=61UTS_INST&auth=SAML",
+                "note": [],
+                "last_modified_date": "2024-08-30T16:15:58.457Z",
+                "type_attributes": [],
+                "section_info": {
+                    "id": "14709545820005671",
+                    "name": "Resources",
+                    "visibility": false,
+                    "section_tags": {
+                        "total_record_count": 0,
+                        "link": ""
+                    },
+                    "section_locked": false
+                },
+                "citation_tags": {
+                    "total_record_count": 0,
+                    "link": "https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses/14709545710005671/reading-lists/14709545720005671/citations/14709545830005671/tags"
+                },
+                "link": "https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses/14709545710005671/reading-lists/14709545720005671/citations/14709545830005671"
+            },
+            {
+                "id": "14709545950005671",
+                "status": {
+                    "value": "Complete",
+                    "desc": "Complete"
+                },
+                "copyrights_status": {
+                    "value": "NOTDETERMINED",
+                    "desc": "Not Determined"
+                },
+                "secondary_type": {
+                    "value": "BK_C",
+                    "desc": "Book Chapter"
+                },
+                "type": {
+                    "value": "BK",
+                    "desc": "Physical Book"
+                },
+                "metadata": {
+                    "title": "POSTED BY MICHAEL WU WITH*OUT* mms_id",
+                    "author": "Wichael Mu., Allen, J., Harris, R., Jago, L., Tatrai, A., Jonson, P., & D'Arcy, E.",
+                    "publisher": "Wichael Mu, Ltd.",
+                    "edition": "Leganto Essentials ed.",
+                    "isbn": "9780730369400",
+                    "note": "Hopefully the missing fields are added this time. Expecting details related to Chapters, start page, and page, and possibly a call number.",
+                    "year": "2020",
+                    "pages": "432",
+                    "source": "https://ebookcentral.proquest.com/lib/uts/reader.action?docID=6727640&ppg=13",
+                    "publication_date": "2020",
+                    "mms_id": "991006947664405671",
+                    "additional_person_name": "Harris, Robert,; Jago, Leo,",
+                    "place_of_publication": "Milton, Qld."
+                },
+                "leganto_permalink": "https://ap02-psb.alma.exlibrisgroup.com/leganto/readinglist/citation/14709545950005671?institute=61UTS_INST&auth=SAML",
+                "note": [],
+                "last_modified_date": "2024-08-30T16:17:48.850Z",
+                "type_attributes": [],
+                "section_info": {
+                    "id": "14709545820005671",
+                    "name": "Resources",
+                    "visibility": false,
+                    "section_tags": {
+                        "total_record_count": 0,
+                        "link": ""
+                    },
+                    "section_locked": false
+                },
+                "citation_tags": {
+                    "total_record_count": 0,
+                    "link": "https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses/14709545710005671/reading-lists/14709545720005671/citations/14709545950005671/tags"
+                },
+                "link": "https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses/14709545710005671/reading-lists/14709545720005671/citations/14709545950005671"
+            }
+        ],
+        "link": "https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses/14709545710005671/reading-lists/14709545720005671/citations/"
+    },
+    "locked": false,
+    "last_modified_date": "2024-08-30T16:17:48.892Z",
+    "link": "https://api-ap.hosted.exlibrisgroup.com/almaws/v1/courses/14709545710005671/reading-lists/14709545720005671"
+}
+
+================================================================================
+
+I understand the importance of the mms_id, by the ExLibris Leganto Docs:
+
+"MMS id. When included, will act as if to add repository citation and metadata 
+fields from the repository record and will override any field in the citation.
+When not included, will act as a non-repository citation. And in that case,
+even if a match to an existing record is found, the citation metadata field
+will not be overridden."
+
+However, the POSTed Chapter details in the metadata, start and end pages, and
+possibly more values are not directly copied over to the new Citations 
+regardless of whether the mms_id is present or not.
+
+Seeking some clarity on this.
+
+================================================================================
