@@ -164,3 +164,4 @@ cython_debug/
 Leganto/leganto
 *.terraform*
 *.bak
+.megaignore
