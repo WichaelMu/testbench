@@ -165,3 +165,6 @@ Leganto/leganto
 *.terraform*
 *.bak
 .megaignore
+daiu/*.json
+daiu/*.xlsx
+daiu/*.csv
