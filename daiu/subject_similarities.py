@@ -10,6 +10,15 @@ import json
 from functional import pseq
 from bs4 import BeautifulSoup
 
+USE_PROD=True
+
+ENVIRONMENT = 'PROD' if USE_PROD else 'NONPROD'
+FILE_PATH = F'{ENVIRONMENT}-collated.json'
+
+THRESHOLD=75
+SIMILAR_APPROACHES_PATH = F'{ENVIRONMENT}-similar-approaches.json'
+SIMILAR_OUTCOMES_PATH = F'{ENVIRONMENT}-similar-outcomes.json'
+
 def sql(query):
     return duckdb.query(query).to_df()
 
@@ -21,7 +30,7 @@ def remove_html_elements (markup):
 def normalise_m (m):
     return round ((m - float(1)) * float (100))
 
-def get_access_token(use_prod=False):
+def get_access_token (use_prod=False):
     client_id = ''
     client_secret = ''
     token_url = ''
@@ -33,10 +42,10 @@ def get_access_token(use_prod=False):
         token_url = 'https://authz.nonprod.cortex.uts.edu.au/oauth2/token/'
         scope = 'data.curriculum.nonprod.cortex.uts.edu.au/curriculum:data:token'
     else:
-        client_id = 'xxxxxxxxxxxxxxxxxx'
-        client_secret = 'yyyyyyyyyyyyyyyyyyyyyyyy'
-        token_url = 'https://authz.nonprod.cortex.uts.edu.au/oauth2/token/'
-        scope = 'data.curriculum.nonprod.cortex.uts.edu.au/curriculum:data:token'
+        client_id = 's52m9vodfsmdiqb22gf8cegkq'
+        client_secret = 'rpqdnq37a3vr79pbepn423vnql66beqaqt07vgq3v7rntjj96q'
+        token_url = 'https://authz.cortex.uts.edu.au/oauth2/token/'
+        scope = 'data.curriculum.cortex.uts.edu.au/curriculum:data:token'
 
     payload = {
         'grant_type': 'client_credentials',
@@ -45,33 +54,32 @@ def get_access_token(use_prod=False):
         'scope': scope
     }
 
-    response = requests.post(token_url, data=payload)
-    response.raise_for_status()
-    token_data = response.json()
+    response = requests.post (token_url, data=payload)
+    response.raise_for_status ()
+    token_data = response.json ()
 
     return token_data['access_token']
 
 def get_api_url (use_prod=False):
     return 'https://data.curriculum.nonprod.cortex.uts.edu.au' if not use_prod else 'https://data.curriculum.cortex.uts.edu.au'
 
-def make_get_request(api_url, access_token, raise_on_error=True):
+def make_get_request (api_url, access_token, raise_on_error=True):
     headers = { 'Authorization': F'Bearer {access_token}' }
-    response = requests.get(api_url, headers=headers)
+    response = requests.get (api_url, headers=headers)
 
     if (raise_on_error):
-        response.raise_for_status()
+        response.raise_for_status ()
 
-    return response.json()
+    return response.json ()
 
 def write_json (path, data):
     with open (path, 'w') as w:
         json.dump (data, w)
 
-FILE_PATH = "collated.json"
 def collate_all_subjects ():
-    access_token = get_access_token ()
-    all_subjects_page_url = F'{get_api_url (False)}/subjects?page='
-    max_pages = 1 << 8
+    access_token = get_access_token (USE_PROD)
+    all_subjects_page_url = F'{get_api_url (USE_PROD)}/subjects?page='
+    max_pages = 1 << 16
     current_page = 1
 
     all_subjects = []
@@ -95,16 +103,16 @@ def get_subjects ():
 
         # Make file.
         if (not os.path.isfile (FILE_PATH)):
+            print (F'No saved file found, creating {FILE_PATH}...')
             collate_all_subjects ()
 
         with open (FILE_PATH) as subs:
+            print (F'Opening saved file {FILE_PATH}')
             return json.load (subs)
 
     except Exception as E:
 
         raise E
-
-THRESHOLD=75
 
 def parallel_get_similar_approach (data_group):
     subject_code = data_group['subject_definition'].get ('code', None)
@@ -112,9 +120,9 @@ def parallel_get_similar_approach (data_group):
     if (subject_code is None):
         return []
 
-    print (F'Processing Approac: {subject_code}')
+    print (F'\tProcessing Approac: {subject_code}')
 
-    get_similars_url = F'{get_api_url (False)}/subjects/{subject_code}/similar-learning-approach?threshold={THRESHOLD}'
+    get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-approach?threshold={THRESHOLD}'
     approach_response = make_get_request (get_similars_url, data_group['access_token'], False)
 
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-subjects', []) } ]
@@ -125,15 +133,15 @@ def parallel_get_similar_outcome (data_group):
     if (subject_code is None):
         return []
 
-    print (F'Processing Outcome: {subject_code}')
+    print (F'\tProcessing Outcome: {subject_code}')
 
-    get_similars_url = F'{get_api_url (False)}/subjects/{subject_code}/similar-learning-outcomes?threshold={THRESHOLD}'
+    get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-outcomes?threshold={THRESHOLD}'
     approach_response = make_get_request (get_similars_url, data_group['access_token'], False)
 
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-learning-outcomes', []) } ]
 
 def get_similar_subjects (subjects_array):
-    access_token = get_access_token (False)
+    access_token = get_access_token (USE_PROD)
 
     similar_approaches = pseq (subjects_array) \
         .map (lambda x: { 'subject_definition': x, 'access_token': access_token }) \
@@ -147,22 +155,19 @@ def get_similar_subjects (subjects_array):
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
-    similar_approaches_path = 'similar_approaches.json'
-    similar_outcomes_path = 'similar_outcomes.json'
+    print (F'Saving to {SIMILAR_APPROACHES_PATH}...')
+    write_json (SIMILAR_APPROACHES_PATH, similar_approaches)
 
-    print (F'Saving to {similar_approaches_path}')
-    write_json (similar_approaches_path, similar_approaches)
-
-    print (F'Saving to {similar_outcomes_path}')
-    write_json (similar_outcomes_path, similar_outcomes)
+    print (F'Saving to {SIMILAR_OUTCOMES_PATH}...')
+    write_json (SIMILAR_OUTCOMES_PATH, similar_outcomes)
 
     return similar_approaches, similar_outcomes
 
 def to_csv ():
     print ('Loading Saved Similars...')
-    with open('similar_approaches.json', 'r') as f1, open('similar_outcomes.json', 'r') as f2:
-        data1 = json.load(f1)
-        data2 = json.load(f2)
+    with open(SIMILAR_APPROACHES_PATH, 'r') as f1, open(SIMILAR_OUTCOMES_PATH, 'r') as f2:
+        data1 = json.load (f1)
+        data2 = json.load (f2)
 
     print ('Combining Similars...')
     combined_data = data1 + data2
@@ -172,7 +177,7 @@ def to_csv ():
     print ('Exploding Similars...')
     j_df = pd.json_normalize (filtered_empties)
     bomb_df = j_df.explode ('similars', ignore_index=True)
-    separated_df = pd.concat ([bomb_df.drop (columns=['similars']), bomb_df['similars'].apply (pd.Series)], axis=1)
+    separated_df = pd.concat ([ bomb_df.drop (columns=['similars']), bomb_df['similars'].apply (pd.Series) ], axis=1)
 
     print ('Creating Subject Lookup Table....')
     subjects = get_subjects ()
@@ -201,16 +206,16 @@ def to_csv ():
             row['name'],
             row['parent_academic_org'].get ('label', ''),
             remove_html_elements (row['description']),
-            row['parent_academic_org'].get ('label', ''),
+            row['study_level_ref'].get ('value', ''),
 
             # Similarity Score.
             F'{normalise_m (row["M"])}%'
         ]]
-        transient_df = pd.DataFrame (rows, columns=final_result.columns)
 
+        transient_df = pd.DataFrame (rows, columns=final_result.columns)
         final_result = pd.concat([ final_result, transient_df ], ignore_index=True)
 
-    output_file_path = 'final_result.xlsx'
+    output_file_path = F'{ENVIRONMENT}-absolution.xlsx'
     print (F'Saving result to {output_file_path}...')
     final_result.to_excel (output_file_path, index=False)
 
@@ -219,13 +224,15 @@ def to_csv ():
 
 def main ():
 
+    print (F'ENVIRONMENT: {ENVIRONMENT}')
+
     # Use file from previous run.
     # Or, generate file from API call.
-    # subjects = get_subjects ()
-    # print (len (subjects))
+    subjects = get_subjects ()
+    print (len (subjects))
 
     # Generate files for similarities.
-    # similar_approahces, similar_outcomes = get_similar_subjects (subjects)
+    similar_approahces, similar_outcomes = get_similar_subjects (subjects)
 
     # Open similarity files for csv conversion.
     final_result, final_result_path = to_csv ()
