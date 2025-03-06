@@ -7,7 +7,7 @@ import openpyxl
 import duckdb
 import requests
 import json
-from functional import pseq
+from functional import pseq, seq
 from bs4 import BeautifulSoup
 
 USE_PROD=True
@@ -28,7 +28,7 @@ def remove_html_elements (markup):
     return markup
 
 def normalise_m (m):
-    return round ((m - float(1)) * float (100))
+    return round ((m - float (1)) * float (100))
 
 def get_access_token (use_prod=False):
     client_id = ''
@@ -76,22 +76,42 @@ def write_json (path, data):
     with open (path, 'w') as w:
         json.dump (data, w)
 
+import time
+def parallel_collate_all_subjects (all_subjects_page_url, page_range, max_pages, access_token):
+    def execute_request (page):
+        # Sorry, I think I'm about to throw up.
+        time.sleep (2)
+
+        print (F'Current Page: {page} out of {max_pages}')
+        response = make_get_request (F'{all_subjects_page_url}{page}', access_token)
+        return response['subjects']
+
+    return seq (page_range).map (lambda p: execute_request (p)).reduce (lambda x, y: x + y, []).to_list ()
+
+
 def collate_all_subjects ():
+
     access_token = get_access_token (USE_PROD)
     all_subjects_page_url = F'{get_api_url (USE_PROD)}/subjects?page='
     max_pages = 1 << 16
-    current_page = 1
 
-    all_subjects = []
+    print ('Making initial request...')
+    initial_request = make_get_request (F'{all_subjects_page_url}1', access_token)
+    max_pages = initial_request['_meta']['total']
 
-    while (current_page <= max_pages):
-        print (F'Current Page: {current_page} out of {max_pages}')
+    print ('Chunkifying...')
+    import multiprocessing as mp
 
-        response = make_get_request (F'{all_subjects_page_url}{current_page}', access_token)
-        max_pages = response['_meta']['total']
-        current_page += 1
+    # my nproc is 16. // 2 will return 8.
+    # you can try increaasing this, but i have nothing left to throw up.
+    nproc = mp.cpu_count () // 2
 
-        all_subjects += response['subjects']
+    page_range_begin = 2 # We already made a GET REQ to ?page=1
+    page_list = list (range (page_range_begin, max_pages))
+
+    print ('Collating in Parallel...')
+    chunks = pseq (page_list).grouped (len (page_list) // nproc + (len (page_list) % nproc > 0)).to_list ()
+    all_subjects = pseq (chunks).map (lambda x: parallel_collate_all_subjects (all_subjects_page_url, x, max_pages, access_token)).reduce (lambda x, y: x + y, []).to_list ()
 
     write_json (FILE_PATH, all_subjects)
 
@@ -123,8 +143,9 @@ def parallel_get_similar_approach (data_group):
     print (F'\tProcessing Approac: {subject_code}')
 
     get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-approach?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, data_group['access_token'], False)
+    approach_response = make_get_request (get_similars_url, data_group['access_token'])#, False)
 
+    time.sleep (2)
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-subjects', []) } ]
 
 def parallel_get_similar_outcome (data_group):
@@ -136,8 +157,9 @@ def parallel_get_similar_outcome (data_group):
     print (F'\tProcessing Outcome: {subject_code}')
 
     get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-outcomes?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, data_group['access_token'], False)
+    approach_response = make_get_request (get_similars_url, data_group['access_token'])#, False)
 
+    time.sleep (2)
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-learning-outcomes', []) } ]
 
 def get_similar_subjects (subjects_array):
@@ -189,11 +211,18 @@ def to_csv ():
     print ('Assigning Main DataFrame...')
 
     final_result = pd.DataFrame (columns = [
-        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description',
-        'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level',
+        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_credit_points', 'subject_assessment_types',
+        'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level', 'similar_subject_credit_points', 'similar_subject_assessment_types',
         'similarity' ])
 
     for idx, row in separated_df.iterrows ():
+        similar_to_assessment_types = code_organised_subjects[row['similar-to']].get ('assessments', [])
+        subject_assessment_types = ''
+        if (len (similar_to_assessment_types) > 0):
+            subject_assessment_types = pseq (similar_to_assessment_types).filter (lambda x: 'type' in x.keys ()).filter (lambda x: 'label' in x['type'].keys ()).map (lambda x: [ x['type']['label'] ]).map (lambda x: ', '.join (x)).reduce (lambda x, y: x + y, [])
+            print (subject_assessment_types)
+            break
+
         rows = [[
             # Relative Subject.
             code_organised_subjects[row['similar-to']]['code'],
