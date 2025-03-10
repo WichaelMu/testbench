@@ -106,12 +106,13 @@ def collate_all_subjects ():
     # you can try increaasing this, but i have nothing left to throw up.
     nproc = mp.cpu_count () // 2
 
-    page_range_begin = 2 # We already made a GET REQ to ?page=1
+    page_range_begin = 1
     page_list = list (range (page_range_begin, max_pages))
 
     print ('Collating in Parallel...')
     chunks = pseq (page_list).grouped (len (page_list) // nproc + (len (page_list) % nproc > 0)).to_list ()
     all_subjects = pseq (chunks).map (lambda x: parallel_collate_all_subjects (all_subjects_page_url, x, max_pages, access_token)).reduce (lambda x, y: x + y, []).to_list ()
+    all_subjects += initial_request['subjects']
 
     write_json (FILE_PATH, all_subjects)
 
