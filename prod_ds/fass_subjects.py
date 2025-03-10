@@ -95,7 +95,7 @@ def parallel_collate_all_relatives (target_url, page_range, max_pages, access_to
 
     return seq (page_range).map (lambda p: execute_request (p)).reduce (lambda x, y: x + y, []).to_list ()
 
-def collate_all_course_subjects (courses):
+def collate_all_course_subjects (courses, related_what):
 
     all_related_subjects = []
 
@@ -115,7 +115,7 @@ def collate_all_course_subjects (courses):
             continue
 
         access_token = get_access_token (USE_PROD)
-        all_courses_page_url = F'{get_api_url (USE_PROD)}/courses/{course_code}/subjects?page='
+        all_courses_page_url = F'{get_api_url (USE_PROD)}/courses/{course_code}/{related_what}?page='
         max_pages = 1 << 16
 
         # print (F'Making initial request for {course_code}...')
@@ -124,16 +124,13 @@ def collate_all_course_subjects (courses):
 
         page_list = list (range (page_range_begin, max_pages + 1))
 
-        print (F'Collating {course_code} in Parallel...')
+        print (F'Collating {course_code} for {related_what} in Parallel...')
         chunks = seq (page_list).grouped (len (page_list) // nproc + (len (page_list) % nproc > 0)).to_list ()
-        print (chunks)
         all_related_subjects += pseq (chunks) \
                 .map (lambda x: [ { 'relative-to': course_code, 'subjects': parallel_collate_all_relatives (
-                    all_courses_page_url, x, max_pages, access_token, 'subjects') }]) \
+                    all_courses_page_url, x, max_pages, access_token, related_what) }]) \
                 .reduce (lambda x, y: x + y, []).to_list ()
-        all_related_subjects += [ { 'relative-to': course_code, 'subjects': initial_request['subjects'] } ]
-
-    write_json (RELATED_SUBJECTS_FPATH, all_related_subjects)
+        all_related_subjects += [ { 'relative-to': course_code, 'subjects': initial_request[related_what] } ]
 
     return all_related_subjects
 
@@ -163,7 +160,6 @@ def collate_all_faculty_courses (faculty_code):
     all_courses += initial_request['courses']
 
     write_json (FACULTY_COURSE_FPATH, all_courses)
-
     return all_courses
 
 def get_related_subjects (courses):
@@ -172,7 +168,17 @@ def get_related_subjects (courses):
         # Make file.
         if (not os.path.isfile (RELATED_SUBJECTS_FPATH)):
             print (F'No saved file found, creating {RELATED_SUBJECTS_FPATH}...')
-            return collate_all_course_subjects (courses)
+            what = [ 'subjects', 'majors', 'submajors', 'streams' ]
+            return_value = []
+
+            return_value = seq (what) \
+                    .map (lambda x: collate_all_course_subjects (courses, x)) \
+                    .reduce (lambda x, y: x + y, []) \
+                    .to_list ()
+
+            write_json (RELATED_SUBJECTS_FPATH, return_value)
+            return return_value
+
 
         with open (FACULTY_COURSE_FPATH) as subs:
             print (F'Opening saved file {FACULTY_COURSE_FPATH}')
@@ -197,57 +203,6 @@ def get_faculty_courses (faculty_code):
     except Exception as E:
 
         raise E
-
-def parallel_get_similar_approach (data_group):
-    subject_code = data_group['subject_definition'].get ('code', None)
-
-    if (subject_code is None):
-        return []
-
-    print (F'\tProcessing Approac: {subject_code}')
-
-    get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-approach?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, data_group['access_token'])#, False)
-
-    time.sleep (2)
-    return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-subjects', []) } ]
-
-def parallel_get_similar_outcome (data_group):
-    subject_code = data_group['subject_definition'].get ('code', None)
-
-    if (subject_code is None):
-        return []
-
-    print (F'\tProcessing Outcome: {subject_code}')
-
-    get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-outcomes?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, data_group['access_token'])#, False)
-
-    time.sleep (2)
-    return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-learning-outcomes', []) } ]
-
-def get_similar_subjects (subjects_array):
-    access_token = get_access_token (USE_PROD)
-
-    similar_approaches = pseq (subjects_array) \
-        .map (lambda x: { 'subject_definition': x, 'access_token': access_token }) \
-        .map (lambda x: parallel_get_similar_approach (x)) \
-        .reduce (lambda x, y: x + y, []) \
-        .to_list ()
-
-    similar_outcomes = pseq (subjects_array) \
-        .map (lambda x: { 'subject_definition': x, 'access_token': access_token }) \
-        .map (lambda x: parallel_get_similar_outcome (x)) \
-        .reduce (lambda x, y: x + y, []) \
-        .to_list ()
-
-    print (F'Saving to {SIMILAR_APPROACHES_PATH}...')
-    write_json (SIMILAR_APPROACHES_PATH, similar_approaches)
-
-    print (F'Saving to {SIMILAR_OUTCOMES_PATH}...')
-    write_json (SIMILAR_OUTCOMES_PATH, similar_outcomes)
-
-    return similar_approaches, similar_outcomes
 
 def to_csv ():
     print ('Loading Relatives')
