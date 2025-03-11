@@ -1,9 +1,11 @@
-import pandas as pd
 import os
 import os.path
 import time
 import requests
 import json
+
+import pandas as pd
+import duckdb
 from functional import pseq, seq
 from bs4 import BeautifulSoup
 
@@ -19,7 +21,11 @@ COMBINED_FPATH = F'{ENVIRONMENT}-combined.json'
 THRESHOLD=75
 APPROACH_FPATH = F'{ENVIRONMENT}-similar-approaches.json'
 OUTCOMES_FPATH = F'{ENVIRONMENT}-similar-outcomes.json'
+FILTERED_EMPTIES_FPATH = F'{ENVIRONMENT}-filtered-empties.json'
 
+
+def exec_sql (q):
+    return duckdb.query (q).to_df ()
 
 def remove_html_elements (markup):
     if (isinstance (markup, str)):
@@ -125,6 +131,7 @@ def collate_all_subjects ():
     print ('Collating in Parallel...')
     chunks = pseq (page_list).grouped (len (page_list) // nproc + (len (page_list) % nproc > 0)).to_list ()
     all_subjects = pseq (chunks).map (lambda x: parallel_collate_all_subjects (all_subjects_page_url, x, max_pages, access_token)).reduce (lambda x, y: x + y, []).to_list ()
+    all_subjets += initial_request['subjects'] # Include the initial request.
 
     write_json (COLLATED_FPATH, all_subjects)
 
@@ -201,36 +208,44 @@ def get_similar_subjects (subjects_array):
 
     return similar_approaches, similar_outcomes
 
-def to_csv ():
+def filter_empties (array, relative_key):
+    return pseq (array).filter (lambda x: len (x[relative_key]) != 0).to_list ()
 
-    combined_data = []
+def json_to_df (json, explode_on):
+    json_df = pd.json_normalize (json)
+    bomb_df = json_df.explode (explode_on, ignore_index=True)
+    separated_df = pd.concat ([ bomb_df.drop (columns=[explode_on]), bomb_df[explode_on].apply (pd.Series) ], axis=1)
 
-    # Combining Similars takes time, so let's save it if we're running frequently.
-    if (not fexists (COMBINED_FPATH)):
-        print ('Loading Saved Similars...')
-        with open(APPROACH_FPATH, 'r') as f1, open(OUTCOMES_FPATH, 'r') as f2:
-            data1 = json.load (f1)
-            data2 = json.load (f2)
+    return separated_df
 
-        print ('Combining Similars...')
-        combined_data = data1 + data2
+def ensure_dual_minimum_threshold (approaches, outcomes):
+    filtered_empty_approaches = filter_empties (approaches, 'similars')
+    filtered_empty_outcomes = filter_empties (outcomes, 'similars')
 
-        print (F'Saving Combined to {COMBINED_FPATH}...')
-        write_json (COMBINED_FPATH, combined_data)
+    approach_df = json_to_df (filtered_empty_approaches, 'similars')
+    outcomes_df = json_to_df (filtered_empty_outcomes, 'similars')
 
-    else:
-        print (F'Loading Combined from {COMBINED_FPATH}...')
-        combined_data = load_json (COMBINED_FPATH)
+    duckdb.register ('approach_df', approach_df)
+    duckdb.register ('outcomes_df', outcomes_df)
 
-    filtered_empties = pseq (combined_data).filter (lambda x: len (x['similars']) != 0).to_list ()
-    
-    print ('Exploding Similars...')
-    j_df = pd.json_normalize (filtered_empties)
-    bomb_df = j_df.explode ('similars', ignore_index=True)
-    separated_df = pd.concat ([ bomb_df.drop (columns=['similars']), bomb_df['similars'].apply (pd.Series) ], axis=1)
+    print ('Running Both Similar Query...')
+    both_similar_query = '''
+    SELECT o."similar-to", o.*
+        FROM outcomes_df o
+    INNER JOIN approach_df a
+    ON
+        o."similar-to" = a."similar-to"
+        AND
+        o.code = a.code
+    '''
+
+    # Results in similar-to, similar-to_1 columns. They should be equal to each other
+    # but i was bothered enough to write this comment instead of dropping the column.
+    return exec_sql (both_similar_query)
+
+def to_csv (subjects, minimum_threshold):
 
     print ('Creating Subject Lookup Table....')
-    subjects = get_subjects ()
     subject_lookup_table = pseq (subjects) \
         .filter (lambda x: 'code' in x.keys ()) \
         .map (lambda x: { x['code']: x }) \
@@ -248,7 +263,7 @@ def to_csv ():
         # Similarity Score.
         'similarity' ])
 
-    for idx, row in separated_df.iterrows ():
+    for idx, row in minimum_threshold.iterrows ():
         assessment_types_lookup = subject_lookup_table[row['similar-to']].get ('assessments', [])
         assessment_types_similar = row.get ('assessments', [])
 
@@ -328,8 +343,11 @@ def main ():
     # Generate files for similarities.
     similar_approahces, similar_outcomes = get_similar_subjects (subjects)
 
+    # Ensure a structure where both approaches and outcomes codes meet the threshold.
+    minimum_thresholds = ensure_dual_minimum_threshold (similar_approahces, similar_outcomes)
+
     # Open similarity files for csv conversion.
-    final_result, final_result_path = to_csv ()
+    final_result, final_result_path = to_csv (subjects, minimum_threshold)
 
 if (__name__ == '__main__'):
     main ()
