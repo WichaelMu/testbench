@@ -1,26 +1,25 @@
 import pandas as pd
-import numpy as np
-from pandasql import sqldf
 import os
 import os.path
-import openpyxl
-import duckdb
+import time
 import requests
 import json
 from functional import pseq, seq
 from bs4 import BeautifulSoup
 
-USE_PROD=True
-
+# Environment settings.
+USE_PROD = False
 ENVIRONMENT = 'PROD' if USE_PROD else 'NONPROD'
-FILE_PATH = F'{ENVIRONMENT}-collated.json'
 
+# 'Cached' files.
+COLLATED_FPATH = F'{ENVIRONMENT}-collated.json'
+COMBINED_FPATH = F'{ENVIRONMENT}-combined.json'
+
+# Search results.
 THRESHOLD=75
-SIMILAR_APPROACHES_PATH = F'{ENVIRONMENT}-similar-approaches.json'
-SIMILAR_OUTCOMES_PATH = F'{ENVIRONMENT}-similar-outcomes.json'
+APPROACH_FPATH = F'{ENVIRONMENT}-similar-approaches.json'
+OUTCOMES_FPATH = F'{ENVIRONMENT}-similar-outcomes.json'
 
-def sql(query):
-    return duckdb.query(query).to_df()
 
 def remove_html_elements (markup):
     if (isinstance (markup, str)):
@@ -65,18 +64,32 @@ def get_api_url (use_prod=False):
 
 def make_get_request (api_url, access_token, raise_on_error=True):
     headers = { 'Authorization': F'Bearer {access_token}' }
-    response = requests.get (api_url, headers=headers)
 
-    if (raise_on_error):
-        response.raise_for_status ()
+    while True:
+        response = requests.get (api_url, headers=headers)
 
-    return response.json ()
+        # if (raise_on_error):
+        #     response.raise_for_status ()
+
+        if (response.status_code == 200):
+            return response.json ()
+
+        print (F'\tEncountered {response.status_code}. Retrying {api_url}...')
+        time.sleep (5)
+        print (F'\tRetrying last...')
+
+def fexists (fpath):
+    return os.path.isfile (fpath)
 
 def write_json (path, data):
     with open (path, 'w') as w:
         json.dump (data, w)
 
-import time
+def load_json (path):
+    with open (path) as f:
+        print (F'Opening saved file {path}')
+        return json.load (f)
+
 def parallel_collate_all_subjects (all_subjects_page_url, page_range, max_pages, access_token):
     def execute_request (page):
         # Sorry, I think I'm about to throw up.
@@ -106,34 +119,24 @@ def collate_all_subjects ():
     # you can try increaasing this, but i have nothing left to throw up.
     nproc = mp.cpu_count () // 2
 
-    page_range_begin = 1
-    page_list = list (range (page_range_begin, max_pages))
+    page_range_begin = 2 # We already made a GET REQ to ?page=1
+    page_list = list (range (page_range_begin, max_pages + 1))
 
     print ('Collating in Parallel...')
     chunks = pseq (page_list).grouped (len (page_list) // nproc + (len (page_list) % nproc > 0)).to_list ()
     all_subjects = pseq (chunks).map (lambda x: parallel_collate_all_subjects (all_subjects_page_url, x, max_pages, access_token)).reduce (lambda x, y: x + y, []).to_list ()
-    all_subjects += initial_request['subjects']
 
-    write_json (FILE_PATH, all_subjects)
+    write_json (COLLATED_FPATH, all_subjects)
 
     return all_subjects
 
 
 def get_subjects ():
-    try:
+    if (not fexists (COLLATED_FPATH)):
+        print (F'No saved file found, creating {COLLATED_FPATH}...')
+        return collate_all_subjects ()
 
-        # Make file.
-        if (not os.path.isfile (FILE_PATH)):
-            print (F'No saved file found, creating {FILE_PATH}...')
-            collate_all_subjects ()
-
-        with open (FILE_PATH) as subs:
-            print (F'Opening saved file {FILE_PATH}')
-            return json.load (subs)
-
-    except Exception as E:
-
-        raise E
+    return load_json (COLLATED_FPATH)
 
 def parallel_get_similar_approach (data_group):
     subject_code = data_group['subject_definition'].get ('code', None)
@@ -144,7 +147,7 @@ def parallel_get_similar_approach (data_group):
     print (F'\tProcessing Approac: {subject_code}')
 
     get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-approach?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, data_group['access_token'])#, False)
+    approach_response = make_get_request (get_similars_url, data_group['access_token'], False)
 
     time.sleep (2)
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-subjects', []) } ]
@@ -158,42 +161,66 @@ def parallel_get_similar_outcome (data_group):
     print (F'\tProcessing Outcome: {subject_code}')
 
     get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-outcomes?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, data_group['access_token'])#, False)
+    approach_response = make_get_request (get_similars_url, data_group['access_token'], False)
 
     time.sleep (2)
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-learning-outcomes', []) } ]
 
 def get_similar_subjects (subjects_array):
     access_token = get_access_token (USE_PROD)
+    similar_approaches = []
+    similar_outcomes = []
 
-    similar_approaches = pseq (subjects_array) \
-        .map (lambda x: { 'subject_definition': x, 'access_token': access_token }) \
-        .map (lambda x: parallel_get_similar_approach (x)) \
-        .reduce (lambda x, y: x + y, []) \
-        .to_list ()
+    if (not fexists (APPROACH_FPATH)):
+        similar_approaches = pseq (subjects_array) \
+            .map (lambda x: { 'subject_definition': x, 'access_token': access_token }) \
+            .map (lambda x: parallel_get_similar_approach (x)) \
+            .reduce (lambda x, y: x + y, []) \
+            .to_list ()
 
-    similar_outcomes = pseq (subjects_array) \
-        .map (lambda x: { 'subject_definition': x, 'access_token': access_token }) \
-        .map (lambda x: parallel_get_similar_outcome (x)) \
-        .reduce (lambda x, y: x + y, []) \
-        .to_list ()
+        print (F'Saving to {APPROACH_FPATH}...')
+        write_json (APPROACH_FPATH, similar_approaches)
 
-    print (F'Saving to {SIMILAR_APPROACHES_PATH}...')
-    write_json (SIMILAR_APPROACHES_PATH, similar_approaches)
+    else:
+        print (F'{APPROACH_FPATH} already exists. Skipping...')
+        similar_approaches = load_json (APPROACH_FPATH)
 
-    print (F'Saving to {SIMILAR_OUTCOMES_PATH}...')
-    write_json (SIMILAR_OUTCOMES_PATH, similar_outcomes)
+    if (not fexists (OUTCOMES_FPATH)):
+        similar_outcomes = pseq (subjects_array) \
+            .map (lambda x: { 'subject_definition': x, 'access_token': access_token }) \
+            .map (lambda x: parallel_get_similar_outcome (x)) \
+            .reduce (lambda x, y: x + y, []) \
+            .to_list ()
+
+        print (F'Saving to {OUTCOMES_FPATH}...')
+        write_json (OUTCOMES_FPATH, similar_outcomes)
+
+    else:
+        print (F'{OUTCOMES_FPATH} already exists. Skipping...')
+        similar_outcomes = load_json (OUTCOMES_FPATH)
 
     return similar_approaches, similar_outcomes
 
 def to_csv ():
-    print ('Loading Saved Similars...')
-    with open(SIMILAR_APPROACHES_PATH, 'r') as f1, open(SIMILAR_OUTCOMES_PATH, 'r') as f2:
-        data1 = json.load (f1)
-        data2 = json.load (f2)
 
-    print ('Combining Similars...')
-    combined_data = data1 + data2
+    combined_data = []
+
+    # Combining Similars takes time, so let's save it if we're running frequently.
+    if (not fexists (COMBINED_FPATH)):
+        print ('Loading Saved Similars...')
+        with open(APPROACH_FPATH, 'r') as f1, open(OUTCOMES_FPATH, 'r') as f2:
+            data1 = json.load (f1)
+            data2 = json.load (f2)
+
+        print ('Combining Similars...')
+        combined_data = data1 + data2
+
+        print (F'Saving Combined to {COMBINED_FPATH}...')
+        write_json (COMBINED_FPATH, combined_data)
+
+    else:
+        print (F'Loading Combined from {COMBINED_FPATH}...')
+        combined_data = load_json (COMBINED_FPATH)
 
     filtered_empties = pseq (combined_data).filter (lambda x: len (x['similars']) != 0).to_list ()
     
@@ -204,7 +231,7 @@ def to_csv ():
 
     print ('Creating Subject Lookup Table....')
     subjects = get_subjects ()
-    code_organised_subjects = pseq (subjects) \
+    subject_lookup_table = pseq (subjects) \
         .filter (lambda x: 'code' in x.keys ()) \
         .map (lambda x: { x['code']: x }) \
         .reduce (lambda x, y: x | y)
@@ -212,24 +239,59 @@ def to_csv ():
     print ('Assigning Main DataFrame...')
 
     final_result = pd.DataFrame (columns = [
+        # Relative Subject.
         'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_credit_points', 'subject_assessment_types',
+
+        # Similar Subject.
         'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level', 'similar_subject_credit_points', 'similar_subject_assessment_types',
+
+        # Similarity Score.
         'similarity' ])
 
     for idx, row in separated_df.iterrows ():
-        similar_to_assessment_types = code_organised_subjects[row['similar-to']].get ('assessments', [])
+        assessment_types_lookup = subject_lookup_table[row['similar-to']].get ('assessments', [])
+        assessment_types_similar = row.get ('assessments', [])
+
+        # why tf is row['570012']['assessments'] a float?!?!
+        # there are a few more, but why a float? and not default to []?!
+        # they're all nan anyway...?
+        # print (type (similar_assessment_types))
+        #
+        # if (isinstance (similar_assessment_types, float)):
+        #     print (similar_assessment_types)
+        #     print (row['assessments'])
+        if (not isinstance (assessment_types_similar, list)):
+            continue
+
         subject_assessment_types = ''
-        if (len (similar_to_assessment_types) > 0):
-            subject_assessment_types = pseq (similar_to_assessment_types).filter (lambda x: 'type' in x.keys ()).filter (lambda x: 'label' in x['type'].keys ()).map (lambda x: [ x['type']['label'] ]).map (lambda x: ', '.join (x)).reduce (lambda x, y: x + y, [])
-            print (subject_assessment_types)
-            break
+        similar_assessment_types = ''
+
+        if (len (assessment_types_lookup) > 0):
+            seq_subject_assessment_types = seq (assessment_types_lookup) \
+                    .filter (lambda x: 'type' in x.keys ()) \
+                    .filter (lambda x: 'label' in x['type'].keys ()) \
+                    .map (lambda x: [ x['type']['label'] ]) \
+                    .map (lambda x: ', '.join (x))
+
+            subject_assessment_types = ', '.join (seq_subject_assessment_types)
+
+        if (len (assessment_types_similar) > 0):
+            seq_similar_assessment_types = seq (assessment_types_similar) \
+                    .filter (lambda x: 'type' in x.keys ()) \
+                    .filter (lambda x: 'label' in x['type'].keys ()) \
+                    .map (lambda x: [ x['type']['label'] ]) \
+                    .map (lambda x: ', '.join (x))
+
+            similar_assessment_types = ', '.join (seq_similar_assessment_types)
 
         rows = [[
             # Relative Subject.
-            code_organised_subjects[row['similar-to']]['code'],
-            code_organised_subjects[row['similar-to']]['name'],
-            code_organised_subjects[row['similar-to']].get ('parent_academic_org', {}).get ('label', ''),
-            remove_html_elements (code_organised_subjects[row['similar-to']].get ('description', '')),
+            subject_lookup_table[row['similar-to']]['code'],
+            subject_lookup_table[row['similar-to']]['name'],
+            subject_lookup_table[row['similar-to']].get ('parent_academic_org', {}).get ('label', ''),
+            remove_html_elements (subject_lookup_table[row['similar-to']].get ('description', '')),
+            subject_lookup_table[row['similar-to']]['credit_points'],
+            subject_assessment_types,
 
             # Similar Subject.
             row['code'],
@@ -237,6 +299,8 @@ def to_csv ():
             row['parent_academic_org'].get ('label', ''),
             remove_html_elements (row['description']),
             row['study_level_ref'].get ('value', ''),
+            row['credit_points'],
+            similar_assessment_types,
 
             # Similarity Score.
             F'{normalise_m (row["M"])}%'
