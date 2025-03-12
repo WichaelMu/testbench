@@ -264,6 +264,8 @@ def get_from_row (row, key, default):
     if (value is not None):
         if (isinstance (value, str)):
             return ast.literal_eval (value)
+
+        # what the fuck? handling arrays in DFs is a lottery.
         if (isinstance (value, numpy.ndarray)):
             return list (value)
     return default
@@ -303,7 +305,7 @@ def to_csv (subjects, minimum_threshold):
 
         # Similar.
         assessment_types_similar = get_from_row (row, 'assessments', [])
-        locations_similar = get_from_row (row, 'subject_offering', []) # what the fuck? handling arrays in dfs is a lottery.
+        locations_similar = get_from_row (row, 'subject_offering', [])
 
         # why tf is row['570012']['assessments'] a float?!?!
         # there are a few more, but why a float? and not default to []?!
