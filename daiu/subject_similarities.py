@@ -3,6 +3,7 @@ import os.path
 import time
 import requests
 import json
+import ast
 
 import pandas as pd
 import duckdb
@@ -22,6 +23,7 @@ THRESHOLD=75
 APPROACH_FPATH = F'{ENVIRONMENT}-similar-approaches.json'
 OUTCOMES_FPATH = F'{ENVIRONMENT}-similar-outcomes.json'
 FILTERED_EMPTIES_FPATH = F'{ENVIRONMENT}-filtered-empties.json'
+SUBJECT_LOOKUP_TABLE_FPATH = F'{ENVIRONMENT}-subject-lookup.json'
 
 
 def exec_sql (q):
@@ -131,7 +133,7 @@ def collate_all_subjects ():
     print ('Collating in Parallel...')
     chunks = pseq (page_list).grouped (len (page_list) // nproc + (len (page_list) % nproc > 0)).to_list ()
     all_subjects = pseq (chunks).map (lambda x: parallel_collate_all_subjects (all_subjects_page_url, x, max_pages, access_token)).reduce (lambda x, y: x + y, []).to_list ()
-    all_subjets += initial_request['subjects'] # Include the initial request.
+    all_subjects += initial_request['subjects'] # Include the initial request.
 
     write_json (COLLATED_FPATH, all_subjects)
 
@@ -219,12 +221,15 @@ def json_to_df (json, explode_on):
     return separated_df
 
 def ensure_dual_minimum_threshold (approaches, outcomes):
+    print ('Ensuring Dual Minimum Thresholds...')
     filtered_empty_approaches = filter_empties (approaches, 'similars')
     filtered_empty_outcomes = filter_empties (outcomes, 'similars')
 
+    print ('Loading JSON to DF...')
     approach_df = json_to_df (filtered_empty_approaches, 'similars')
     outcomes_df = json_to_df (filtered_empty_outcomes, 'similars')
 
+    print ('Registering DFs...')
     duckdb.register ('approach_df', approach_df)
     duckdb.register ('outcomes_df', outcomes_df)
 
@@ -245,17 +250,25 @@ def ensure_dual_minimum_threshold (approaches, outcomes):
 
 def to_csv (subjects, minimum_threshold):
 
-    print ('Creating Subject Lookup Table....')
-    subject_lookup_table = pseq (subjects) \
-        .filter (lambda x: 'code' in x.keys ()) \
-        .map (lambda x: { x['code']: x }) \
-        .reduce (lambda x, y: x | y)
+    subject_lookup_table = {}
+    if (not fexists (SUBJECT_LOOKUP_TABLE_FPATH)):
+        print ('Creating Subject Lookup Table....')
+
+        subject_lookup_table = pseq (subjects) \
+            .filter (lambda x: 'code' in x.keys ()) \
+            .map (lambda x: { x['code']: x }) \
+            .reduce (lambda x, y: x | y)
+
+        write_json (SUBJECT_LOOKUP_TABLE_FPATH, subject_lookup_table)
+    else:
+
+        subject_lookup_table = load_json (SUBJECT_LOOKUP_TABLE_FPATH)
 
     print ('Assigning Main DataFrame...')
 
     final_result = pd.DataFrame (columns = [
         # Relative Subject.
-        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_credit_points', 'subject_assessment_types',
+        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_study_level', 'subject_credit_points', 'subject_assessment_types',
 
         # Similar Subject.
         'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level', 'similar_subject_credit_points', 'similar_subject_assessment_types',
@@ -265,7 +278,21 @@ def to_csv (subjects, minimum_threshold):
 
     for idx, row in minimum_threshold.iterrows ():
         assessment_types_lookup = subject_lookup_table[row['similar-to']].get ('assessments', [])
-        assessment_types_similar = row.get ('assessments', [])
+        assessment_types_similar = []
+
+        # For an unknown reason, i am very competent in finding bugs and insects
+        # within the python language. even when given a default '[]' (literally),
+        # the {}.get (key, default) method doesn't return '[]'. it is truly
+        # remarkable that i have to write code in this way.
+        # the same piece of code actually worked before, but no longer works. i
+        # long for the day in which i have to rewrite every single character of
+        # source code because python will have switched up their language syntax
+        # so that every character is one position to the right on the azerty
+        # keyboard layout. just because python felt different in 2025 and needed
+        # a new change for the year of the snake. absolutely phenomenal.
+        row_assessment_value = row.get ('assessments', '[]')
+        if (row_assessment_value is not None):
+            assessment_types_similar = ast.literal_eval (row_assessment_value)
 
         # why tf is row['570012']['assessments'] a float?!?!
         # there are a few more, but why a float? and not default to []?!
@@ -305,6 +332,7 @@ def to_csv (subjects, minimum_threshold):
             subject_lookup_table[row['similar-to']]['name'],
             subject_lookup_table[row['similar-to']].get ('parent_academic_org', {}).get ('label', ''),
             remove_html_elements (subject_lookup_table[row['similar-to']].get ('description', '')),
+            subject_lookup_table[row['similar-to']].get ('study_level_ref', {}).get ('value', ''),
             subject_lookup_table[row['similar-to']]['credit_points'],
             subject_assessment_types,
 
@@ -347,7 +375,7 @@ def main ():
     minimum_thresholds = ensure_dual_minimum_threshold (similar_approahces, similar_outcomes)
 
     # Open similarity files for csv conversion.
-    final_result, final_result_path = to_csv (subjects, minimum_threshold)
+    final_result, final_result_path = to_csv (subjects, minimum_thresholds)
 
 if (__name__ == '__main__'):
     main ()
