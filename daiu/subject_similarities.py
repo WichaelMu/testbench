@@ -5,13 +5,14 @@ import requests
 import json
 import ast
 
+import numpy
 import pandas as pd
 import duckdb
 from functional import pseq, seq
 from bs4 import BeautifulSoup
 
 # Environment settings.
-USE_PROD = False
+USE_PROD = True
 ENVIRONMENT = 'PROD' if USE_PROD else 'NONPROD'
 
 # 'Cached' files.
@@ -248,6 +249,25 @@ def ensure_dual_minimum_threshold (approaches, outcomes):
     # but i was bothered enough to write this comment instead of dropping the column.
     return exec_sql (both_similar_query)
 
+def get_from_row (row, key, default):
+    # For an unknown reason, i am very competent in finding bugs and insects
+    # within the python language. even when given a default '[]' (literally),
+    # the {}.get (key, default) method doesn't return '[]'. it is truly
+    # remarkable that i have to write code in this way.
+    # the same piece of code actually worked before, but no longer works. i
+    # long for the day in which i have to rewrite every single character of
+    # source code because python will have switched up their language syntax
+    # so that every character is one position to the right on the azerty
+    # keyboard layout. just because python felt different in 2025 and needed
+    # a new change for the year of the snake. absolutely phenomenal.
+    value = row.get (key, default)
+    if (value is not None):
+        if (isinstance (value, str)):
+            return ast.literal_eval (value)
+        if (isinstance (value, numpy.ndarray)):
+            return list (value)
+    return default
+
 def to_csv (subjects, minimum_threshold):
 
     subject_lookup_table = {}
@@ -268,31 +288,22 @@ def to_csv (subjects, minimum_threshold):
 
     final_result = pd.DataFrame (columns = [
         # Relative Subject.
-        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_study_level', 'subject_credit_points', 'subject_assessment_types',
+        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_study_level', 'subject_location_code', 'subject_credit_points', 'subject_assessment_types',
 
         # Similar Subject.
-        'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level', 'similar_subject_credit_points', 'similar_subject_assessment_types',
+        'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level', 'similar_subject_location_code', 'similar_subject_credit_points', 'similar_subject_assessment_types',
 
         # Similarity Score.
         'similarity' ])
 
     for idx, row in minimum_threshold.iterrows ():
+        # Lookup.
         assessment_types_lookup = subject_lookup_table[row['similar-to']].get ('assessments', [])
-        assessment_types_similar = []
+        locations_lookup = subject_lookup_table[row['similar-to']].get ('subject_offering', [])
 
-        # For an unknown reason, i am very competent in finding bugs and insects
-        # within the python language. even when given a default '[]' (literally),
-        # the {}.get (key, default) method doesn't return '[]'. it is truly
-        # remarkable that i have to write code in this way.
-        # the same piece of code actually worked before, but no longer works. i
-        # long for the day in which i have to rewrite every single character of
-        # source code because python will have switched up their language syntax
-        # so that every character is one position to the right on the azerty
-        # keyboard layout. just because python felt different in 2025 and needed
-        # a new change for the year of the snake. absolutely phenomenal.
-        row_assessment_value = row.get ('assessments', '[]')
-        if (row_assessment_value is not None):
-            assessment_types_similar = ast.literal_eval (row_assessment_value)
+        # Similar.
+        assessment_types_similar = get_from_row (row, 'assessments', [])
+        locations_similar = get_from_row (row, 'subject_offering', []) # what the fuck? handling arrays in dfs is a lottery.
 
         # why tf is row['570012']['assessments'] a float?!?!
         # there are a few more, but why a float? and not default to []?!
@@ -306,7 +317,9 @@ def to_csv (subjects, minimum_threshold):
             continue
 
         subject_assessment_types = ''
+        subject_location_codes = ''
         similar_assessment_types = ''
+        similar_location_codes = ''
 
         if (len (assessment_types_lookup) > 0):
             seq_subject_assessment_types = seq (assessment_types_lookup) \
@@ -326,6 +339,26 @@ def to_csv (subjects, minimum_threshold):
 
             similar_assessment_types = ', '.join (seq_similar_assessment_types)
 
+        if (len (locations_lookup) > 0):
+            seq_locations_lookup = seq (locations_lookup)\
+                .filter (lambda x: 'location' in x.keys ()) \
+                .filter (lambda x: 'label' in x['location'].keys ()) \
+                .map (lambda x: [ x['location']['label'] ]) \
+                .map (lambda x: ', '.join (x))
+
+            useq_locations_lookup = list (set (seq_locations_lookup.to_list ()))
+            subject_location_codes = ', '.join (useq_locations_lookup)
+
+        if (len (locations_similar) > 0):
+            seq_locations_similar = seq (locations_similar)\
+                .filter (lambda x: 'location' in x.keys ()) \
+                .filter (lambda x: 'label' in x['location'].keys ()) \
+                .map (lambda x: [ x['location']['label'] ]) \
+                .map (lambda x: ', '.join (x))
+
+            useq_locations_similar = list (set (seq_locations_similar.to_list ()))
+            similar_location_codes = ', '.join (useq_locations_similar)
+
         rows = [[
             # Relative Subject.
             subject_lookup_table[row['similar-to']]['code'],
@@ -333,6 +366,7 @@ def to_csv (subjects, minimum_threshold):
             subject_lookup_table[row['similar-to']].get ('parent_academic_org', {}).get ('label', ''),
             remove_html_elements (subject_lookup_table[row['similar-to']].get ('description', '')),
             subject_lookup_table[row['similar-to']].get ('study_level_ref', {}).get ('value', ''),
+            subject_location_codes,
             subject_lookup_table[row['similar-to']]['credit_points'],
             subject_assessment_types,
 
@@ -342,6 +376,7 @@ def to_csv (subjects, minimum_threshold):
             row['parent_academic_org'].get ('label', ''),
             remove_html_elements (row['description']),
             row['study_level_ref'].get ('value', ''),
+            similar_location_codes,
             row['credit_points'],
             similar_assessment_types,
 
