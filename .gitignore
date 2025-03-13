@@ -171,3 +171,4 @@ daiu/*.csv
 prod_ds/*.json
 prod_ds/*.xlsx
 prod_ds/*.csv
+**secrets**
