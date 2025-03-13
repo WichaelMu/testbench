@@ -12,7 +12,7 @@ from functional import pseq, seq
 from bs4 import BeautifulSoup
 
 # Environment settings.
-USE_PROD = True
+USE_PROD = False
 ENVIRONMENT = 'PROD' if USE_PROD else 'NONPROD'
 
 # 'Cached' files.
@@ -27,6 +27,9 @@ FILTERED_EMPTIES_FPATH = F'{ENVIRONMENT}-filtered-empties.json'
 SUBJECT_LOOKUP_TABLE_FPATH = F'{ENVIRONMENT}-subject-lookup.json'
 
 
+global_access_token = ''
+
+
 def exec_sql (q):
     return duckdb.query (q).to_df ()
 
@@ -38,22 +41,12 @@ def remove_html_elements (markup):
 def normalise_m (m):
     return round ((m - float (1)) * float (100))
 
-def get_access_token (use_prod=False):
-    client_id = ''
-    client_secret = ''
-    token_url = ''
-    scope = ''
-
-    if (not use_prod):
-        client_id = '5tbulgc54eb6neskd0cuev396q'
-        client_secret = '1h29kaqpkoe8tiokr5i3hatg2amnjrrdj02nochsv37rk1i2l16f'
-        token_url = 'https://authz.nonprod.cortex.uts.edu.au/oauth2/token/'
-        scope = 'data.curriculum.nonprod.cortex.uts.edu.au/curriculum:data:token'
-    else:
-        client_id = 's52m9vodfsmdiqb22gf8cegkq'
-        client_secret = 'rpqdnq37a3vr79pbepn423vnql66beqaqt07vgq3v7rntjj96q'
-        token_url = 'https://authz.cortex.uts.edu.au/oauth2/token/'
-        scope = 'data.curriculum.cortex.uts.edu.au/curriculum:data:token'
+def set_access_token (use_prod=False):
+    credentials = load_json ('SECRETS.JSON')
+    client_id = credentials[ENVIRONMENT]['client_id']
+    client_secret = credentials[ENVIRONMENT]['client_secret']
+    token_url = credentials[ENVIRONMENT]['token_url']
+    scope = credentials[ENVIRONMENT]['scope']
 
     payload = {
         'grant_type': 'client_credentials',
@@ -66,13 +59,15 @@ def get_access_token (use_prod=False):
     response.raise_for_status ()
     token_data = response.json ()
 
-    return token_data['access_token']
+    global global_access_token
+    global_access_token = token_data['access_token']
 
 def get_api_url (use_prod=False):
     return 'https://data.curriculum.nonprod.cortex.uts.edu.au' if not use_prod else 'https://data.curriculum.cortex.uts.edu.au'
 
-def make_get_request (api_url, access_token, raise_on_error=True):
-    headers = { 'Authorization': F'Bearer {access_token}' }
+def make_get_request (api_url, raise_on_error=True):
+    headers = { 'Authorization': F'Bearer {global_access_token}' }
+    attempts = 1
 
     while True:
         response = requests.get (api_url, headers=headers)
@@ -81,11 +76,19 @@ def make_get_request (api_url, access_token, raise_on_error=True):
         #     response.raise_for_status ()
 
         if (response.status_code == 200):
+            if (attempts > 1):
+                print (F'Retry successful on attempt: {attempts}')
             return response.json ()
+
+        if (response.status_code == 403 or response.status_code == 401):
+            print (F'Failed: {response.status_code}. Retrieving and setting new access token...')
+            set_access_token (USE_PROD)
+            headers = { 'Authorization': F'Bearer {global_access_token}' }
 
         print (F'\tEncountered {response.status_code}. Retrying {api_url}...')
         time.sleep (5)
-        print (F'\tRetrying last...')
+        attempts += 1
+        print (F'\tRetrying last. Attempt #: {attempts}...')
 
 def fexists (fpath):
     return os.path.isfile (fpath)
@@ -99,13 +102,13 @@ def load_json (path):
         print (F'Opening saved file {path}')
         return json.load (f)
 
-def parallel_collate_all_subjects (all_subjects_page_url, page_range, max_pages, access_token):
+def parallel_collate_all_subjects (all_subjects_page_url, page_range, max_pages):
     def execute_request (page):
         # Sorry, I think I'm about to throw up.
         time.sleep (2)
 
         print (F'Current Page: {page} out of {max_pages}')
-        response = make_get_request (F'{all_subjects_page_url}{page}', access_token)
+        response = make_get_request (F'{all_subjects_page_url}{page}')
         return response['subjects']
 
     return seq (page_range).map (lambda p: execute_request (p)).reduce (lambda x, y: x + y, []).to_list ()
@@ -113,12 +116,11 @@ def parallel_collate_all_subjects (all_subjects_page_url, page_range, max_pages,
 
 def collate_all_subjects ():
 
-    access_token = get_access_token (USE_PROD)
     all_subjects_page_url = F'{get_api_url (USE_PROD)}/subjects?page='
     max_pages = 1 << 16
 
     print ('Making initial request...')
-    initial_request = make_get_request (F'{all_subjects_page_url}1', access_token)
+    initial_request = make_get_request (F'{all_subjects_page_url}1')
     max_pages = initial_request['_meta']['total']
 
     print ('Chunkifying...')
@@ -133,7 +135,7 @@ def collate_all_subjects ():
 
     print ('Collating in Parallel...')
     chunks = pseq (page_list).grouped (len (page_list) // nproc + (len (page_list) % nproc > 0)).to_list ()
-    all_subjects = pseq (chunks).map (lambda x: parallel_collate_all_subjects (all_subjects_page_url, x, max_pages, access_token)).reduce (lambda x, y: x + y, []).to_list ()
+    all_subjects = pseq (chunks).map (lambda x: parallel_collate_all_subjects (all_subjects_page_url, x, max_pages)).reduce (lambda x, y: x + y, []).to_list ()
     all_subjects += initial_request['subjects'] # Include the initial request.
 
     write_json (COLLATED_FPATH, all_subjects)
@@ -157,7 +159,7 @@ def parallel_get_similar_approach (data_group):
     print (F'\tProcessing Approac: {subject_code}')
 
     get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-approach?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, data_group['access_token'], False)
+    approach_response = make_get_request (get_similars_url, False)
 
     time.sleep (2)
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-subjects', []) } ]
@@ -171,19 +173,18 @@ def parallel_get_similar_outcome (data_group):
     print (F'\tProcessing Outcome: {subject_code}')
 
     get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-outcomes?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, data_group['access_token'], False)
+    approach_response = make_get_request (get_similars_url, False)
 
     time.sleep (2)
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-learning-outcomes', []) } ]
 
 def get_similar_subjects (subjects_array):
-    access_token = get_access_token (USE_PROD)
     similar_approaches = []
     similar_outcomes = []
 
     if (not fexists (APPROACH_FPATH)):
         similar_approaches = pseq (subjects_array) \
-            .map (lambda x: { 'subject_definition': x, 'access_token': access_token }) \
+            .map (lambda x: { 'subject_definition': x, 'access_token': global_access_token }) \
             .map (lambda x: parallel_get_similar_approach (x)) \
             .reduce (lambda x, y: x + y, []) \
             .to_list ()
@@ -197,7 +198,7 @@ def get_similar_subjects (subjects_array):
 
     if (not fexists (OUTCOMES_FPATH)):
         similar_outcomes = pseq (subjects_array) \
-            .map (lambda x: { 'subject_definition': x, 'access_token': access_token }) \
+            .map (lambda x: { 'subject_definition': x, 'access_token': global_access_token }) \
             .map (lambda x: parallel_get_similar_outcome (x)) \
             .reduce (lambda x, y: x + y, []) \
             .to_list ()
@@ -399,6 +400,7 @@ def to_csv (subjects, minimum_threshold):
 def main ():
 
     print (F'ENVIRONMENT: {ENVIRONMENT}')
+    set_access_token (USE_PROD)
 
     # Use file from previous run.
     # Or, generate file from API call.
