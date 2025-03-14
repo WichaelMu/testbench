@@ -42,7 +42,7 @@ def normalise_m (m):
     return round ((m - float (1)) * float (100))
 
 def set_access_token (use_prod=False):
-    credentials = load_json ('SECRETS.JSON')
+    credentials = load_json ('secrets.json')
     client_id = credentials[ENVIRONMENT]['client_id']
     client_secret = credentials[ENVIRONMENT]['client_secret']
     token_url = credentials[ENVIRONMENT]['token_url']
@@ -302,11 +302,11 @@ def to_csv (subjects, minimum_threshold):
     for idx, row in minimum_threshold.iterrows ():
         # Lookup.
         assessment_types_lookup = subject_lookup_table[row['similar-to']].get ('assessments', [])
-        locations_lookup = subject_lookup_table[row['similar-to']].get ('subject_offering', [])
+        subject_offering_lookup = subject_lookup_table[row['similar-to']].get ('subject_offering', [])
 
         # Similar.
         assessment_types_similar = get_from_row (row, 'assessments', [])
-        locations_similar = get_from_row (row, 'subject_offering', [])
+        subject_offering_similar = get_from_row (row, 'subject_offering', [])
 
         # why tf is row['570012']['assessments'] a float?!?!
         # there are a few more, but why a float? and not default to []?!
@@ -319,10 +319,17 @@ def to_csv (subjects, minimum_threshold):
         if (not isinstance (assessment_types_similar, list)):
             continue
 
+        # Lookup.
         subject_assessment_types = ''
         subject_location_codes = ''
+        subject_mode_label = ''
+        subject_mode_value = ''
+
+        # Similar.
         similar_assessment_types = ''
         similar_location_codes = ''
+        similar_mode_label = ''
+        similar_mode_value = ''
 
         if (len (assessment_types_lookup) > 0):
             seq_subject_assessment_types = seq (assessment_types_lookup) \
@@ -342,8 +349,9 @@ def to_csv (subjects, minimum_threshold):
 
             similar_assessment_types = ', '.join (seq_similar_assessment_types)
 
-        if (len (locations_lookup) > 0):
-            seq_locations_lookup = seq (locations_lookup)\
+        if (len (subject_offering_lookup) > 0):
+            # Locations.
+            seq_locations_lookup = seq (subject_offering_lookup)\
                 .filter (lambda x: 'location' in x.keys ()) \
                 .filter (lambda x: 'label' in x['location'].keys ()) \
                 .map (lambda x: [ x['location']['label'] ]) \
@@ -352,8 +360,11 @@ def to_csv (subjects, minimum_threshold):
             useq_locations_lookup = list (set (seq_locations_lookup.to_list ()))
             subject_location_codes = ', '.join (useq_locations_lookup)
 
-        if (len (locations_similar) > 0):
-            seq_locations_similar = seq (locations_similar)\
+            # Mode Label & Mode Value.
+
+        if (len (subject_offering_similar) > 0):
+            # Locations.
+            seq_locations_similar = seq (subject_offering_similar)\
                 .filter (lambda x: 'location' in x.keys ()) \
                 .filter (lambda x: 'label' in x['location'].keys ()) \
                 .map (lambda x: [ x['location']['label'] ]) \
@@ -361,6 +372,14 @@ def to_csv (subjects, minimum_threshold):
 
             useq_locations_similar = list (set (seq_locations_similar.to_list ()))
             similar_location_codes = ', '.join (useq_locations_similar)
+
+            # Mode Label & Mode Value.
+            seq_locations_similar = seq (subject_offering_similar)\
+                .filter (lambda x: 'mode' in x.keys ()) \
+                .filter (lambda x: 'label' in x['mode'].keys ()) \
+                .filter (lambda x: 'value' in x['mode'].keys ()) \
+                .map (lambda x: { 'label': x['mode']['label'], 'value': x['mode']['value'] }) \
+                .to_list ()
 
         rows = [[
             # Relative Subject.
