@@ -17,6 +17,8 @@ USE_PROD=True
 ENVIRONMENT = 'PROD' if USE_PROD else 'NONPROD'
 
 COLLATED_FPATH = F'{ENVIRONMENT}-collated.json'
+COLLATED_SUBJECTS_FPATH = F'{ENVIRONMENT}-collated-subjects.json'
+SUBJECT_LOOKUP_TABLE_FPATH = F'{ENVIRONMENT}-subject-lookup.json'
 FACULTY_COURSE_FPATH = F'{ENVIRONMENT}-collated-faculty-courses.json'
 RELATED_SUBJECTS_FPATH = F'{ENVIRONMENT}-related-subjects.json'
 EXPANDED_SUBJECTS_FPATH = F'{ENVIRONMENT}-expanded-subjects.json'
@@ -78,6 +80,9 @@ def make_get_request (api_url, raise_on_error=True):
         attempts += 1
         print (F'\tRetrying last. Attempt #: {attempts}...')
 
+def fexists (fpath):
+    return os.path.isfile (fpath)
+
 def write_json (path, data):
     with open (path, 'w') as w:
         json.dump (data, w)
@@ -108,11 +113,57 @@ def parallel_execute_requests (target_url, page_range, max_pages, response_key):
 
     return seq (page_range).map (lambda p: execute_request (p)).reduce (lambda x, y: x + y, []).to_list ()
 
+def parallel_collate_all_subjects (all_subjects_page_url, page_range, max_pages):
+    def execute_request (page):
+        # Sorry, I think I'm about to throw up.
+        time.sleep (2)
+
+        print (F'Current Page: {page} out of {max_pages}')
+        response = make_get_request (F'{all_subjects_page_url}{page}')
+        return response['subjects']
+
+    return seq (page_range).map (lambda p: execute_request (p)).reduce (lambda x, y: x + y, []).to_list ()
+
+def collate_all_subjects ():
+
+    all_subjects_page_url = F'{get_api_url (USE_PROD)}/subjects?page='
+    max_pages = 1 << 16
+
+    print ('Making initial request...')
+    initial_request = make_get_request (F'{all_subjects_page_url}1')
+    max_pages = initial_request['_meta']['total']
+
+    print ('Chunkifying...')
+    import multiprocessing as mp
+
+    # my nproc is 16. // 2 will return 8.
+    # you can try increaasing this, but i have nothing left to throw up.
+    nproc = mp.cpu_count () // 2
+
+    page_range_begin = 2 # We already made a GET REQ to ?page=1
+    page_list = list (range (page_range_begin, max_pages + 1))
+
+    print ('Collating in Parallel...')
+    chunks = pseq (page_list).grouped (len (page_list) // nproc + (len (page_list) % nproc > 0)).to_list ()
+    all_subjects = pseq (chunks).map (lambda x: parallel_collate_all_subjects (all_subjects_page_url, x, max_pages)).reduce (lambda x, y: x + y, []).to_list ()
+    all_subjects += initial_request['subjects'] # Include the initial request.
+
+    write_json (COLLATED_SUBJECTS_FPATH, all_subjects)
+
+    return all_subjects
+
+def get_subjects ():
+    if (not fexists (COLLATED_SUBJECTS_FPATH)):
+        print (F'No saved file found, creating {COLLATED_FPATH}...')
+        return collate_all_subjects ()
+
+    return load_json (COLLATED_SUBJECTS_FPATH)
+
 def collate_all_course_whats (courses, related_what):
 
     all_related_whats = []
 
-    # my nproc is 12. // 2 will return 6.
+    # my nproc is 16. // 2 will return 8.
     # you can try increaasing this, but i have nothing left to throw up.
     nproc = mp.cpu_count () // 2
 
@@ -233,7 +284,7 @@ def collate_all_faculty_courses (faculty_code):
 
     print ('chunkifying...')
 
-    # my nproc is 12. // 2 will return 6.
+    # my nproc is 16. // 2 will return 8.
     # you can try increaasing this, but i have nothing left to throw up.
     nproc = mp.cpu_count () // 2
 
@@ -290,6 +341,22 @@ def get_faculty_courses (faculty_code):
         raise E
 
 def to_csv ():
+
+    subject_lookup_table = {}
+    if (not fexists (SUBJECT_LOOKUP_TABLE_FPATH)):
+        print ('Creating Subject Lookup Table....')
+
+        subject_lookup_table = pseq (get_subjects ()) \
+            .filter (lambda x: 'code' in x.keys ()) \
+            .map (lambda x: { x['code']: x }) \
+            .reduce (lambda x, y: x | y)
+
+        write_json (SUBJECT_LOOKUP_TABLE_FPATH, subject_lookup_table)
+    else:
+
+        print ('Loading Subject Lookup Table...')
+        subject_lookup_table = load_json (SUBJECT_LOOKUP_TABLE_FPATH)
+
     print ('Loading Relatives')
     related_subjects = []
     with open (RELATED_SUBJECTS_FPATH, 'r') as r:
@@ -318,8 +385,8 @@ def to_csv ():
     print ('Assigning Main DataFrame...')
 
     final_result = pd.DataFrame (columns = [
-        'subject_code', 'subject_name', 'subject_subclass',
-        'relative_subject_code', 'relative_subject_name', 'relative_subject_subclass'])
+        'subject_code', 'subject_name', 'subject_subclass', 'subject_study_level',
+        'relative_subject_code', 'relative_subject_name', 'relative_subject_subclass', 'relative_subject_study_level'])
 
     print (separated_df.columns)
     for idx, row in separated_df.iterrows ():
@@ -328,11 +395,13 @@ def to_csv ():
             courses_lookup[row['relative-to']]['code'],
             courses_lookup[row['relative-to']]['name'],
             remove_html_elements (courses_lookup[row['relative-to']].get ('subclass', {}).get ('label', '')),
+            courses_lookup[row['relative-to']].get ('study_level_ref', {}).get ('value', ''),
 
             # Similar Subject.
             row['code'],
             row['name'],
             row['subclass'].get ('label', ''),
+            subject_lookup_table.get (row['code'], {}).get ('study_level_ref', {}).get ('value', '')
         ]]
 
         transient_df = pd.DataFrame (rows, columns=final_result.columns)
