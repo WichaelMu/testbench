@@ -420,7 +420,7 @@ def main ():
 
     # Use file from previous run.
     # Or, generate file from API call.
-    faculty_courses = get_faculty_courses ("G")
+    faculty_courses = get_faculty_courses ("A")
     print (len (faculty_courses))
 
     related_whats = get_related_whats (faculty_courses, what = [ 'subjects', 'majors', 'submajors', 'streams' ])

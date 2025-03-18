@@ -165,10 +165,7 @@ Leganto/leganto
 *.terraform*
 *.bak
 .megaignore
-daiu/*.json
-daiu/*.xlsx
-daiu/*.csv
-prod_ds/*.json
-prod_ds/*.xlsx
-prod_ds/*.csv
+**/*.json
+**/*.xlsx
+**/*.csv
 **secrets**
