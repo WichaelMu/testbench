@@ -168,10 +168,10 @@ def to_csv (subjects, minimum_threshold):
 
     final_result = pd.DataFrame (columns = [
         # Relative Subject.
-        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_study_level', 'subject_location_code', 'subject_credit_points', 'subject_assessment_types',
+        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_study_level', 'subject_location_code', 'subject_mode_label', 'subject_mode_value', 'subject_delivery_mode', 'subject_credit_points', 'subject_assessment_types',
 
         # Similar Subject.
-        'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level', 'similar_subject_location_code', 'similar_subject_credit_points', 'similar_subject_assessment_types',
+        'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level', 'similar_subject_location_code', 'similar_subject_mode_label', 'similar_subject_mode_value', 'similar_subject_delivery_mode', 'similar_subject_credit_points', 'similar_subject_assessment_types',
 
         # Similarity Score.
         'similarity' ])
@@ -238,6 +238,26 @@ def to_csv (subjects, minimum_threshold):
             subject_location_codes = ', '.join (useq_locations_lookup)
 
             # Mode Label & Mode Value.
+            seq_locations_lookup = seq (subject_offering_lookup)\
+                .filter (lambda x: 'mode' in x.keys ()) \
+                .filter (lambda x: 'label' in x['mode'].keys ()) \
+                .filter (lambda x: 'value' in x['mode'].keys ()) \
+                .map (lambda x: { 'label': x['mode']['label'], 'value': x['mode']['value'] }) \
+                .to_list ()
+
+            useq_locations_label_lookup = list (set (seq (seq_locations_lookup).map (lambda x: x['label']).to_list ()))
+            useq_locations_value_lookup = list (set (seq (seq_locations_lookup).map (lambda x: x['value']).to_list ()))
+            subject_mode_label = ', '.join (useq_locations_label_lookup)
+            subject_mode_value = ', '.join (useq_locations_value_lookup)
+
+            # Delivery Modes.
+            seq_delivery_modes_similar = seq (subject_offering_similar) \
+                .filter (lambda x: 'mode' in x.keys ()) \
+                .filter (lambda x: 'type' in x['mode'].keys ()) \
+                .filter (lambda x: x['mode']['type'] == 'DeliveryMode') \
+                .filter (lambda x: 'label' in x['mode'].keys ()) \
+                .filter (lambda x: 'value' in x['mode'].keys ()) \
+                .map (lambda x: { 'label': x['mode']['label'], 'value': x['mode']['value'] }) \
 
         if (len (subject_offering_similar) > 0):
             # Locations.
@@ -258,6 +278,21 @@ def to_csv (subjects, minimum_threshold):
                 .map (lambda x: { 'label': x['mode']['label'], 'value': x['mode']['value'] }) \
                 .to_list ()
 
+            useq_locations_label_similar = list (set (seq (seq_locations_similar).map (lambda x: x['label']).to_list ()))
+            useq_locations_value_similar = list (set (seq (seq_locations_similar).map (lambda x: x['value']).to_list ()))
+            similar_mode_label = ', '.join (useq_locations_label_similar)
+            similar_mode_value = ', '.join (useq_locations_value_similar)
+
+            # Delivery Modes.
+            seq_delivery_modes_similar = seq (subject_offering_similar) \
+                .filter (lambda x: 'mode' in x.keys ()) \
+                .filter (lambda x: 'type' in x['mode'].keys ()) \
+                .filter (lambda x: x['mode']['type'] == 'DeliveryMode') \
+                .filter (lambda x: 'label' in x['mode'].keys ()) \
+                .filter (lambda x: 'value' in x['mode'].keys ()) \
+                .map (lambda x: { 'label': x['mode']['label'], 'value': x['mode']['value'] }) \
+
+
         rows = [[
             # Relative Subject.
             subject_lookup_table[row['similar-to']]['code'],
@@ -266,6 +301,7 @@ def to_csv (subjects, minimum_threshold):
             remove_html_elements (subject_lookup_table[row['similar-to']].get ('description', '')),
             subject_lookup_table[row['similar-to']].get ('study_level_ref', {}).get ('value', ''),
             subject_location_codes,
+            # label, value, delivery
             subject_lookup_table[row['similar-to']]['credit_points'],
             subject_assessment_types,
 

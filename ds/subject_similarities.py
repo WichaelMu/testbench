@@ -14,15 +14,29 @@ from bs4 import BeautifulSoup
 import dscore as dsc
 
 # 'Cached' files.
-COMBINED_FPATH = F'{ENVIRONMENT}-combined.json'
+COMBINED_FPATH = F'{dsc.get_environment ()}-combined.json'
 
 # Search results.
 THRESHOLD=75
-APPROACH_FPATH = F'{ENVIRONMENT}-similar-approaches.json'
-OUTCOMES_FPATH = F'{ENVIRONMENT}-similar-outcomes.json'
-FILTERED_EMPTIES_FPATH = F'{ENVIRONMENT}-filtered-empties.json'
-SUBJECT_LOOKUP_TABLE_FPATH = F'{ENVIRONMENT}-subject-lookup.json'
+APPROACH_FPATH             = F'{dsc.get_wenvironment ()}-similar-approaches.json'
+OUTCOMES_FPATH             = F'{dsc.get_wenvironment ()}-similar-outcomes.json'
+FILTERED_EMPTIES_FPATH     = F'{dsc.get_wenvironment ()}-filtered-empties.json'
+SUBJECT_LOOKUP_TABLE_FPATH = F'{dsc.get_wenvironment ()}-subject-lookup.json'
 
+
+def refresh_environment ():
+
+    global COMBINED_FPATH
+    global APPROACH_FPATH
+    global OUTCOMES_FPATH
+    global FILTERED_EMPTIES_FPATH
+    global SUBJECT_LOOKUP_TABLE_FPATH
+
+    COMBINED_FPATH = F'{dsc.get_wenvironment ()}-combined.json'
+    APPROACH_FPATH = F'{dsc.get_wenvironment ()}-similar-approaches.json'
+    OUTCOMES_FPATH = F'{dsc.get_wenvironment ()}-similar-outcomes.json'
+    FILTERED_EMPTIES_FPATH = F'{dsc.get_wenvironment ()}-filtered-empties.json'
+    SUBJECT_LOOKUP_TABLE_FPATH = F'{dsc.get_wenvironment ()}-subject-lookup.json'
 
 def exec_sql (q):
     return duckdb.query (q).to_df ()
@@ -42,8 +56,8 @@ def parallel_get_similar_approach (data_group):
 
     print (F'\tProcessing Approac: {subject_code}')
 
-    get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-approach?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, False)
+    get_similars_url = F'{dsc.get_api_url ()}/subjects/{subject_code}/similar-learning-approach?threshold={THRESHOLD}&debug_empty_arrays=true&debug_empty_strings=true&debug_null_values=true'
+    approach_response = dsc.make_get_request (get_similars_url, False)
 
     time.sleep (2)
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-subjects', []) } ]
@@ -56,8 +70,8 @@ def parallel_get_similar_outcome (data_group):
 
     print (F'\tProcessing Outcome: {subject_code}')
 
-    get_similars_url = F'{get_api_url (USE_PROD)}/subjects/{subject_code}/similar-learning-outcomes?threshold={THRESHOLD}'
-    approach_response = make_get_request (get_similars_url, False)
+    get_similars_url = F'{dsc.get_api_url ()}/subjects/{subject_code}/similar-learning-outcomes?threshold={THRESHOLD}&debug_empty_arrays=true&debug_empty_strings=true&debug_null_values=true'
+    approach_response = dsc.make_get_request (get_similars_url, False)
 
     time.sleep (2)
     return [ { 'similar-to': subject_code, 'similars': approach_response.get ('similar-learning-outcomes', []) } ]
@@ -66,33 +80,33 @@ def get_similar_subjects (subjects_array):
     similar_approaches = []
     similar_outcomes = []
 
-    if (not fexists (APPROACH_FPATH)):
+    if (not dsc.fexists (APPROACH_FPATH)):
         similar_approaches = pseq (subjects_array) \
-            .map (lambda x: { 'subject_definition': x, 'access_token': global_access_token }) \
+            .map (lambda x: { 'subject_definition': x }) \
             .map (lambda x: parallel_get_similar_approach (x)) \
             .reduce (lambda x, y: x + y, []) \
             .to_list ()
 
         print (F'Saving to {APPROACH_FPATH}...')
-        write_json (APPROACH_FPATH, similar_approaches)
+        dsc.write_json (APPROACH_FPATH, similar_approaches)
 
     else:
         print (F'{APPROACH_FPATH} already exists. Skipping...')
-        similar_approaches = load_json (APPROACH_FPATH)
+        similar_approaches = dsc.load_json (APPROACH_FPATH)
 
-    if (not fexists (OUTCOMES_FPATH)):
+    if (not dsc.fexists (OUTCOMES_FPATH)):
         similar_outcomes = pseq (subjects_array) \
-            .map (lambda x: { 'subject_definition': x, 'access_token': global_access_token }) \
+            .map (lambda x: { 'subject_definition': x }) \
             .map (lambda x: parallel_get_similar_outcome (x)) \
             .reduce (lambda x, y: x + y, []) \
             .to_list ()
 
         print (F'Saving to {OUTCOMES_FPATH}...')
-        write_json (OUTCOMES_FPATH, similar_outcomes)
+        dsc.write_json (OUTCOMES_FPATH, similar_outcomes)
 
     else:
         print (F'{OUTCOMES_FPATH} already exists. Skipping...')
-        similar_outcomes = load_json (OUTCOMES_FPATH)
+        similar_outcomes = dsc.load_json (OUTCOMES_FPATH)
 
     return similar_approaches, similar_outcomes
 
@@ -105,8 +119,8 @@ def ensure_dual_minimum_threshold (approaches, outcomes):
     filtered_empty_outcomes = filter_empties (outcomes, 'similars')
 
     print ('Loading JSON to DF...')
-    approach_df = json_to_df (filtered_empty_approaches, 'similars')
-    outcomes_df = json_to_df (filtered_empty_outcomes, 'similars')
+    approach_df = dsc.json_to_df (filtered_empty_approaches, 'similars')
+    outcomes_df = dsc.json_to_df (filtered_empty_outcomes, 'similars')
 
     print ('Registering DFs...')
     duckdb.register ('approach_df', approach_df)
@@ -140,18 +154,21 @@ def get_from_row (row, key, default):
     # a new change for the year of the snake. absolutely phenomenal.
     value = row.get (key, default)
     if (value is not None):
+        # sometimes maybe string, sometimes maybe guitar
         if (isinstance (value, str)):
             return ast.literal_eval (value)
 
         # what the fuck? handling arrays in DFs is a lottery.
         if (isinstance (value, numpy.ndarray)):
             return list (value)
+
+        raise Exception ('you have won the lottery and likely found another bug for the snake to eat')
     return default
 
 def to_csv (subjects, minimum_threshold):
 
     subject_lookup_table = {}
-    if (not fexists (SUBJECT_LOOKUP_TABLE_FPATH)):
+    if (not dsc.fexists (SUBJECT_LOOKUP_TABLE_FPATH)):
         print ('Creating Subject Lookup Table....')
 
         subject_lookup_table = pseq (subjects) \
@@ -159,19 +176,19 @@ def to_csv (subjects, minimum_threshold):
             .map (lambda x: { x['code']: x }) \
             .reduce (lambda x, y: x | y)
 
-        write_json (SUBJECT_LOOKUP_TABLE_FPATH, subject_lookup_table)
+        dsc.write_json (SUBJECT_LOOKUP_TABLE_FPATH, subject_lookup_table)
     else:
 
-        subject_lookup_table = load_json (SUBJECT_LOOKUP_TABLE_FPATH)
+        subject_lookup_table = dsc.load_json (SUBJECT_LOOKUP_TABLE_FPATH)
 
     print ('Assigning Main DataFrame...')
 
     final_result = pd.DataFrame (columns = [
         # Relative Subject.
-        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_study_level', 'subject_location_code', 'subject_credit_points', 'subject_assessment_types',
+        'subject_cd', 'subject_name', 'subject_faculty', 'subject_description', 'subject_study_level', 'subject_location_code', 'subject_mode_label', 'subject_mode_value', 'subject_delivery_mode', 'subject_credit_points', 'subject_assessment_types',
 
         # Similar Subject.
-        'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level', 'similar_subject_location_code', 'similar_subject_credit_points', 'similar_subject_assessment_types',
+        'similar_subject_cd', 'similar_subject_name', 'similar_subject_faculty', 'similar_subject_description', 'similar_subject_study_level', 'similar_subject_location_code', 'similar_subject_mode_label', 'similar_subject_mode_value', 'similar_subject_delivery_mode', 'similar_subject_credit_points', 'similar_subject_assessment_types',
 
         # Similarity Score.
         'similarity' ])
@@ -201,12 +218,14 @@ def to_csv (subjects, minimum_threshold):
         subject_location_codes = ''
         subject_mode_label = ''
         subject_mode_value = ''
+        subject_delivery_modes = ''
 
         # Similar.
         similar_assessment_types = ''
         similar_location_codes = ''
         similar_mode_label = ''
         similar_mode_value = ''
+        similar_delivery_modes = ''
 
         if (len (assessment_types_lookup) > 0):
             seq_subject_assessment_types = seq (assessment_types_lookup) \
@@ -234,10 +253,34 @@ def to_csv (subjects, minimum_threshold):
                 .map (lambda x: [ x['location']['label'] ]) \
                 .map (lambda x: ', '.join (x))
 
-            useq_locations_lookup = list (set (seq_locations_lookup.to_list ()))
+            useq_locations_lookup = list (seq_locations_lookup.to_list ())
             subject_location_codes = ', '.join (useq_locations_lookup)
 
             # Mode Label & Mode Value.
+            seq_locations_lookup = seq (subject_offering_lookup)\
+                .filter (lambda x: 'mode' in x.keys ()) \
+                .filter (lambda x: 'label' in x['mode'].keys ()) \
+                .filter (lambda x: 'value' in x['mode'].keys ()) \
+                .map (lambda x: { 'label': x['mode']['label'], 'value': x['mode']['value'] }) \
+                .to_list ()
+
+            useq_locations_label_lookup = list (set (seq (seq_locations_lookup).map (lambda x: x['label']).to_list ()))
+            useq_locations_value_lookup = list (set (seq (seq_locations_lookup).map (lambda x: x['value']).to_list ()))
+            subject_mode_label = ', '.join (useq_locations_label_lookup)
+            subject_mode_value = ', '.join (useq_locations_value_lookup)
+
+            # Delivery Modes.
+            seq_delivery_modes_lookup = seq (subject_offering_lookup) \
+                .filter (lambda x: 'mode' in x.keys ()) \
+                .filter (lambda x: 'type' in x['mode'].keys ()) \
+                .filter (lambda x: x['mode']['type'] == 'DeliveryMode') \
+                .filter (lambda x: 'label' in x['mode'].keys ()) \
+                .filter (lambda x: 'value' in x['mode'].keys ()) \
+                .map (lambda x: [ x['mode']['label'] ]) \
+                .reduce (lambda x, y: x + y, [])
+
+            useq_delivery_modes_lookup = list (set (seq_delivery_modes_lookup))
+            subject_delivery_modes = ', '.join (useq_delivery_modes_lookup)
 
         if (len (subject_offering_similar) > 0):
             # Locations.
@@ -258,14 +301,36 @@ def to_csv (subjects, minimum_threshold):
                 .map (lambda x: { 'label': x['mode']['label'], 'value': x['mode']['value'] }) \
                 .to_list ()
 
+            useq_locations_label_similar = list (set (seq (seq_locations_similar).map (lambda x: x['label']).to_list ()))
+            useq_locations_value_similar = list (set (seq (seq_locations_similar).map (lambda x: x['value']).to_list ()))
+            similar_mode_label = ', '.join (useq_locations_label_similar)
+            similar_mode_value = ', '.join (useq_locations_value_similar)
+
+            # Delivery Modes.
+            seq_delivery_modes_similar = seq (subject_offering_similar) \
+                .filter (lambda x: 'mode' in x.keys ()) \
+                .filter (lambda x: 'type' in x['mode'].keys ()) \
+                .filter (lambda x: x['mode']['type'] == 'DeliveryMode') \
+                .filter (lambda x: 'label' in x['mode'].keys ()) \
+                .filter (lambda x: 'value' in x['mode'].keys ()) \
+                .map (lambda x: [ x['mode']['label'] ]) \
+                .reduce (lambda x, y: x + y, [])
+
+            useq_delivery_modes_similar = list (set (seq_delivery_modes_similar))
+            similar_delivery_modes = ', '.join (useq_delivery_modes_similar)
+
+
         rows = [[
             # Relative Subject.
             subject_lookup_table[row['similar-to']]['code'],
             subject_lookup_table[row['similar-to']]['name'],
             subject_lookup_table[row['similar-to']].get ('parent_academic_org', {}).get ('label', ''),
-            remove_html_elements (subject_lookup_table[row['similar-to']].get ('description', '')),
+            dsc.remove_html_elements (subject_lookup_table[row['similar-to']].get ('description', '')),
             subject_lookup_table[row['similar-to']].get ('study_level_ref', {}).get ('value', ''),
             subject_location_codes,
+            subject_mode_label,
+            subject_mode_value,
+            subject_delivery_modes,
             subject_lookup_table[row['similar-to']]['credit_points'],
             subject_assessment_types,
 
@@ -273,9 +338,12 @@ def to_csv (subjects, minimum_threshold):
             row['code'],
             row['name'],
             row['parent_academic_org'].get ('label', ''),
-            remove_html_elements (row['description']),
+            dsc.remove_html_elements (row['description']),
             row['study_level_ref'].get ('value', ''),
             similar_location_codes,
+            similar_mode_label,
+            similar_mode_value,
+            similar_delivery_modes,
             row['credit_points'],
             similar_assessment_types,
 
@@ -286,7 +354,7 @@ def to_csv (subjects, minimum_threshold):
         transient_df = pd.DataFrame (rows, columns=final_result.columns)
         final_result = pd.concat([ final_result, transient_df ], ignore_index=True)
 
-    output_file_path = F'{ENVIRONMENT}-absolution.xlsx'
+    output_file_path = F'{dsc.get_wenvironment ()}-absolution.xlsx'
     print (F'Saving result to {output_file_path}...')
     final_result.to_excel (output_file_path, index=False)
 
@@ -295,8 +363,9 @@ def to_csv (subjects, minimum_threshold):
 
 def main ():
 
-    print (F'ENVIRONMENT: {ENVIRONMENT}')
-    set_access_token (USE_PROD)
+    dsc.set_environment ('NONPROD')
+    print (F'ENVIRONMENT: {dsc.get_wenvironment ()}')
+    dsc.set_access_token ()
 
     # Use file from previous run.
     # Or, generate file from API call.

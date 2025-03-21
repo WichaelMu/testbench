@@ -36,6 +36,9 @@ def get_environment ():
     global USE_PROD
     return USE_PROD
 
+def get_wenvironment ():
+    return 'PROD' if get_environment () else 'NONPROD'
+
 def set_environment (environment):
     global USE_PROD
     global ENVIRONMENT
@@ -46,7 +49,7 @@ def set_environment (environment):
         case 'NONPROD' | True:
             USE_PROD = False
         case _:
-            raise Exceptino ('what')
+            raise Exception ('what')
 
     ENVIRONMENT = 'PROD' if USE_PROD else 'NONPROD'
     refresh_environment ()
@@ -92,7 +95,7 @@ def make_get_request (api_url, raise_on_error=True):
 
         if (response.status_code == 403 or response.status_code == 401):
             print (F'Failed: {response.status_code}. Retrieving and setting new access token...')
-            set_access_token (USE_PROD)
+            set_access_token ()
             headers = { 'Authorization': F'Bearer {global_access_token}' }
 
         print (F'\tEncountered {response.status_code}. Retrying {api_url}...')
@@ -172,20 +175,20 @@ def get_faculty_courses_lookup ():
 def get_courses ():
     if (not fexists (COLLATED_COURSES_FPATH)):
         print (F'No saved file found, creating {COLLATED_COURSES_FPATH}...')
-        return request_in_parallel (F'{get_api_url ()}/courses?page=', 'courses', COLLATED_COURSES_FPATH)
+        return request_in_parallel (F'{get_api_url ()}/courses?debug_empty_arrays=true&debug_empty_strings=true&debug_null_values=true&page=', 'courses', COLLATED_COURSES_FPATH)
 
     return load_json (COLLATED_COURSES_FPATH)
 
 def get_subjects ():
     if (not fexists (COLLATED_SUBJECTS_FPATH)):
         print (F'No saved file found, creating {COLLATED_SUBJECTS_FPATH}...')
-        return request_in_parallel (F'{get_api_url ()}/subjects?page=', 'subjects', COLLATED_SUBJECTS_FPATH)
+        return request_in_parallel (F'{get_api_url ()}/subjects?debug_empty_arrays=true&debug_empty_strings=true&debug_null_values=true&page=', 'subjects', COLLATED_SUBJECTS_FPATH)
 
     return load_json (COLLATED_SUBJECTS_FPATH)
 
 def get_faculty_courses (faculty_code):
     if (not os.path.isfile (COLLATED_FACULTY_COURSE_FPATH)):
         print (F'No saved file found, creating {COLLATED_FACULTY_COURSE_FPATH}...')
-        return request_in_parallel (F'{get_api_url ()}/faculties/{faculty_code}/courses?page=', 'courses', COLLATED_FACULTY_COURSE_FPATH)
+        return request_in_parallel (F'{get_api_url ()}/faculties/{faculty_code}/courses?debug_empty_arrays=true&debug_empty_strings=true&debug_null_values=true&page=', 'courses', COLLATED_FACULTY_COURSE_FPATH)
 
     return load_json (COLLATED_FACULTY_COURSE_FPATH)
