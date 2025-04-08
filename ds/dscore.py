@@ -103,6 +103,31 @@ def make_get_request (api_url, raise_on_error=True):
         attempts += 1
         print (F'\tRetrying last. Attempt #: {attempts}...')
 
+def make_post_request (api_url, payload, raise_on_error=True):
+    headers = { 'Authorization': F'Bearer {global_access_token}' }
+    attempts = 1
+
+    while True:
+        response = requests.post (api_url, headers=headers, data=payload)
+
+        # if (raise_on_error):
+        #     response.raise_for_status ()
+
+        if (response.status_code == 200):
+            if (attempts > 1):
+                print (F'Retry successful on attempt: {attempts}')
+            return response.json ()
+
+        if (response.status_code == 403 or response.status_code == 401):
+            print (F'Failed: {response.status_code}. Retrieving and setting new access token...')
+            set_access_token ()
+            headers = { 'Authorization': F'Bearer {global_access_token}' }
+
+        print (F'\tEncountered {response.status_code}. Retrying {api_url}...')
+        time.sleep (5)
+        attempts += 1
+        print (F'\tRetrying last. Attempt #: {attempts}...')
+
 def fexists (fpath):
     return os.path.isfile (fpath)
 
