@@ -104,11 +104,16 @@ def make_get_request (api_url, raise_on_error=True):
         print (F'\tRetrying last. Attempt #: {attempts}...')
 
 def make_post_request (api_url, payload, raise_on_error=True):
-    headers = { 'Authorization': F'Bearer {global_access_token}' }
+
+    headers = {
+        'Authorization': F'Bearer {global_access_token}',
+        'Content-Type': 'application/json'
+    }
+
     attempts = 1
 
     while True:
-        response = requests.post (api_url, headers=headers, data=payload)
+        response = requests.post (api_url, headers=headers, data=json.dumps (payload))
 
         # if (raise_on_error):
         #     response.raise_for_status ()
@@ -217,3 +222,11 @@ def get_faculty_courses (faculty_code):
         return request_in_parallel (F'{get_api_url ()}/faculties/{faculty_code}/courses?debug_empty_arrays=true&debug_empty_strings=true&debug_null_values=true&page=', 'courses', COLLATED_FACULTY_COURSE_FPATH)
 
     return load_json (COLLATED_FACULTY_COURSE_FPATH)
+
+def try_parse_int (i):
+    try:
+        ip = int (i)
+        return True
+    except:
+        return False
+    return False
