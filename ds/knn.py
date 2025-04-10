@@ -141,8 +141,8 @@ def get_similar_things (options):
         }) \
         .to_list ()
 
-    print ('Writing similars to knn-out.json...')
-    dsc.write_json ('knn-out.json', stripped_similars)
+    print ('Writing similars to out-knn.json...')
+    dsc.write_json ('out-knn.json', stripped_similars)
 
     print ('Done.')
 
