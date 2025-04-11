@@ -142,7 +142,7 @@ def write_json (path, data):
 
 def load_json (path):
     with open (path) as f:
-        print (F'Opening saved file {path}')
+        # print (F'Opening saved file {path}')
         return json.load (f)
 
 def json_to_df (json, explode_on):

@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+import json
 
 from functional import pseq, seq
 
@@ -105,7 +106,7 @@ def parse_argv ():
             process_option ('?', 0)
             sys.exit (1)
 
-    print (options)
+    # print (options)
     return options
 
 def get_similar_things (options):
@@ -141,16 +142,17 @@ def get_similar_things (options):
         }) \
         .to_list ()
 
-    print ('Writing similars to out-knn.json...')
-    dsc.write_json ('out-knn.json', stripped_similars)
+    # print ('Writing similars to out-knn.json...')
+    # dsc.write_json ('out-knn.json', stripped_similars)
 
-    print ('Done.')
+    # print ('Done.')
+    print (json.dumps (stripped_similars))
 
 def main ():
     options = parse_argv ()
 
     dsc.set_environment (options[KENVIRONMENT])
-    print (F'ENVIRONMENT: {dsc.get_wenvironment ()}')
+    # print (F'ENVIRONMENT: {dsc.get_wenvironment ()}')
     dsc.set_access_token ()
 
     get_similar_things (options)
