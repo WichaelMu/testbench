@@ -22,21 +22,27 @@ def get_secret_stuff ():
     response.raise_for_status ()
     token_data = response.json ()
 
-    return token_data['access_token']
+    retval = token_data['access_token']
+    print (retval)
+    return retval
 
 def main ():
     access_token = get_secret_stuff ()
 
-    target_url = 'https://uts-test.t1cloud.com/Api/WS/v1/SystemVariable/Save'
+    target_url = 'https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/WS/v1/SystemVariable/Save'
 
     payload = {
         'ParameterName': 'EVT_LAST_MOD_SSP',
         'Value': '2025-02-04T06:02:49+11:00'
     }
 
-    headers = { 'Authorization': F'Bearer: {access_token}' }
+    headers = {
+        'Authorization': F'Bearer: {access_token}',
+        'Accept':        'application/json',
+        'Content-Type':  'application/json'
+    }
 
-    response = requests.post (target_url, headers=headers)
+    response = requests.post (target_url, headers=headers, data=payload)
     # response.raise_for_status ()
 
     print (response.json ())
