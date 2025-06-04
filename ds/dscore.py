@@ -74,6 +74,7 @@ def set_access_token ():
 
     global global_access_token
     global_access_token = token_data['access_token']
+    print (global_access_token)
 
 def get_api_url ():
     return 'https://data.curriculum.nonprod.cortex.uts.edu.au' if not get_environment () else 'https://data.curriculum.cortex.uts.edu.au'

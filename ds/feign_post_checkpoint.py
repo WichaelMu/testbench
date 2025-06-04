@@ -9,7 +9,7 @@ def get_secret_stuff ():
 
     client_id = secret_stuff['client_id']
     client_secret = secret_stuff['client_secret']
-    endpoint = secret_stuff['endpoint']
+    # endpoint = secret_stuff['endpoint']
     oidc_token_endpoint = secret_stuff['oidc_token_endpoint']
 
     payload = {

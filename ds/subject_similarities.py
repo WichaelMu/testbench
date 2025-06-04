@@ -361,9 +361,54 @@ def to_csv (subjects, minimum_threshold):
     return final_result, output_file_path
 
 
+KENVIRONMENT = 'environment'
+def parse_argv ():
+    argv = os.sys.argv[1:]
+    argc = len (argv)
+
+    # print (F'argc, argv: {argc}, {argv}')
+
+    def process_option (option, iterator):
+        match option:
+
+            case '--environment':
+                iterator += 1
+
+                if (argv[iterator] not in [ 'NONPROD', 'PROD' ]):
+                    print ('Option --environment must be either NONPROD or PROD! Defaulting instead.')
+                    return {}, iterator - 1
+
+                return { KENVIRONMENT: argv[iterator] }, iterator
+
+            case _:
+                return {}, iterator
+
+    options = {
+        KENVIRONMENT: 'NONPROD',
+    }
+
+    iterator = 0
+    while (iterator < argc):
+        try:
+
+            option, iterator = process_option (argv[iterator], iterator)
+            options = options | option
+
+            iterator += 1
+
+        except IndexError:
+
+            print (F'Option {iterator + 1} ({argv[iterator]}) requires a parameter.')
+            process_option ('?', 0)
+            sys.exit (1)
+
+    # print (options)
+    return options
+
 def main ():
 
-    dsc.set_environment ('NONPROD')
+    options = parse_argv ()
+    dsc.set_environment (options[KENVIRONMENT])
     print (F'ENVIRONMENT: {dsc.get_wenvironment ()}')
     dsc.set_access_token ()
 
