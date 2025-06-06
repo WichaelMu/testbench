@@ -1,0 +1,396 @@
+using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Runtime.CompilerServices;
+using System.Text;
+
+class FileEncrypto
+{
+	const int SaltSize = 32; // 256-bit
+	const int KeySize = 32;  // AES-256
+	const int IvSize = 16;   // AES block size
+	const int Iterations = 100_000;
+
+	static Dictionary<string, GlobalConfigurationSettings> Settings = new Dictionary<string, GlobalConfigurationSettings>();
+
+	static int Main (string[] args)
+	{
+		O.SetColours (ConsoleColor.Black, ConsoleColor.White);
+		Settings = ParseCommandLineArguments (args);
+
+		if (!VerifyCommandLineArguments (Settings))
+		{
+			PrintUsage ();
+			return 1;
+		}
+
+		ECryptMode Mode = Settings["Mode"].GetValue<ECryptMode> ();
+		string InputPath = Settings["Inbound"].GetValue<string> ();
+		string OutputPath = Settings["Outbound"].GetValue<string> ();
+		string Password = Settings["Key"].GetValue<string> ();
+
+		try
+		{
+			switch (Mode)
+			{
+				case ECryptMode.Encrypt:
+					EncryptFile (InputPath, OutputPath, Password);
+					Console.WriteLine ("Encrypt complete.");
+					break;
+				case ECryptMode.Decrypt:
+					DecryptFile (InputPath, OutputPath, Password);
+					Console.WriteLine ("Decrypt complete.");
+					break;
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine ($"Error during {Mode}.\n\t{ex.Message}");
+			return 1;
+		}
+
+		return 0;
+	}
+
+	static void EncryptFile (string InputPath, string OutputPath, string Password)
+	{
+		byte[] Salt = RandomBytes (SaltSize);
+		byte[] IV = RandomBytes (IvSize);
+		byte[] Derived = DeriveKey (Password, Salt, KeySize * 2);
+		byte[] AESKey = new byte[KeySize];
+		byte[] HMACKey = new byte[KeySize];
+		Array.Copy (Derived, 0, AESKey, 0, KeySize);
+		Array.Copy (Derived, KeySize, HMACKey, 0, KeySize);
+
+		using (Aes AES = Aes.Create ())
+		{
+			AES.Key = AESKey;
+			AES.IV = IV;
+			AES.Mode = CipherMode.CBC;
+			AES.Padding = PaddingMode.PKCS7;
+
+			using (MemoryStream MS = new MemoryStream ())
+			{
+				using (CryptoStream CryptoStream = new CryptoStream (MS, AES.CreateEncryptor (), CryptoStreamMode.Write))
+				using (FileStream FSInput = new FileStream (InputPath, FileMode.Open, FileAccess.Read))
+				{
+					FSInput.CopyTo (CryptoStream);
+				}
+
+				byte[] Ciphertext = MS.ToArray ();
+				using (FileStream FSOutput = new FileStream (OutputPath, FileMode.Create, FileAccess.Write))
+				{
+					FSOutput.Write (Salt, 0, Salt.Length);
+					FSOutput.Write (IV, 0, IV.Length);
+					FSOutput.Write (Ciphertext, 0, Ciphertext.Length);
+
+					using (HMACSHA256 HMAC = new HMACSHA256 (HMACKey))
+					{
+						byte[] AuthData = Combine (Salt, IV, Ciphertext);
+						byte[] Tag = HMAC.ComputeHash (AuthData);
+						FSOutput.Write (Tag, 0, Tag.Length);
+					}
+				}
+			}
+		}
+	}
+	
+	static void DecryptFile (string InputPath, string OutputPath, string Password)
+	{
+		byte[] FileBytes = File.ReadAllBytes (InputPath);
+		if (FileBytes.Length < SaltSize + IvSize + 32)
+			throw new InvalidDataException ("File too small to be valid.");
+
+		byte[] Salt = new byte[SaltSize];
+		byte[] IV = new byte[IvSize];
+		byte[] Tag = new byte[32]; // HMAC-SHA256
+		int CiphertextLength = FileBytes.Length - SaltSize - IvSize - Tag.Length;
+		byte[] Ciphertext = new byte[CiphertextLength];
+
+		Array.Copy (FileBytes, 0, Salt, 0, SaltSize);
+		Array.Copy (FileBytes, SaltSize, IV, 0, IvSize);
+		Array.Copy (FileBytes, SaltSize + IvSize, Ciphertext, 0, CiphertextLength);
+		Array.Copy (FileBytes, SaltSize + IvSize + CiphertextLength, Tag, 0, Tag.Length);
+
+		byte[] Derived = DeriveKey (Password, Salt, KeySize * 2);
+		byte[] AESKey = new byte[KeySize];
+		byte[] HMACKey = new byte[KeySize];
+		Array.Copy (Derived, 0, AESKey, 0, KeySize);
+		Array.Copy (Derived, KeySize, HMACKey, 0, KeySize);
+
+		using (HMACSHA256 HMAC = new HMACSHA256 (HMACKey))
+		{
+			byte[] AuthData = Combine (Salt, IV, Ciphertext);
+			byte[] ComputedTag = HMAC.ComputeHash (AuthData);
+			if (!Compare (Tag, ComputedTag))
+				throw new CryptographicException ("HMAC verification failed. The file may be corrupted or the password is incorrect.");
+		}
+
+		using (Aes AES = Aes.Create ())
+		{
+			AES.Key = AESKey;
+			AES.IV = IV;
+			AES.Mode = CipherMode.CBC;
+			AES.Padding = PaddingMode.PKCS7;
+
+			using (MemoryStream MS = new MemoryStream (Ciphertext))
+			using (CryptoStream CryptoStream = new CryptoStream (MS, AES.CreateDecryptor (), CryptoStreamMode.Read))
+			using (FileStream FSOutput = new FileStream (OutputPath, FileMode.Create, FileAccess.Write))
+			{
+				CryptoStream.CopyTo (FSOutput);
+			}
+		}
+	}
+
+	static byte[] DeriveKey (string Password, byte[] Salt, int Length)
+	{
+		using (Rfc2898DeriveBytes KDF = new Rfc2898DeriveBytes (Password, Salt, Iterations, HashAlgorithmName.SHA256))
+		{
+			return KDF.GetBytes (Length);
+		}
+	}
+
+	static byte[] RandomBytes (int size)
+	{
+		byte[] Bytes = new byte[size];
+		using (RandomNumberGenerator RNG = RandomNumberGenerator.Create ())
+		{
+			RNG.GetBytes (Bytes);
+		}
+		return Bytes;
+	}
+
+	static byte[] Combine (params byte[][] Arrays)
+	{
+		int Length = 0;
+		foreach (byte[] A in Arrays)
+			Length += A.Length;
+
+		byte[] Result = new byte[Length];
+		int Offset = 0;
+		foreach (byte[] A in Arrays)
+		{
+			Buffer.BlockCopy (A, 0, Result, Offset, A.Length);
+			Offset += A.Length;
+		}
+		return Result;
+	}
+
+	static bool Compare (byte[] A, byte[] B)
+	{
+		if (A.Length != B.Length)
+			return false;
+
+		int Diff = 0;
+		for (int i = 0; i < A.Length; i++)
+			Diff |= A[i] ^ B[i];
+
+		return Diff == 0;
+	}
+
+
+	static Dictionary<string, GlobalConfigurationSettings> ParseCommandLineArguments(params string[] ArgV)
+	{
+		Dictionary<string, GlobalConfigurationSettings> UserProvidedConfiguration = new Dictionary<string, GlobalConfigurationSettings>();
+		Upsert (ref UserProvidedConfiguration, "Outbound", new GlobalConfigurationSettings ("OutResult"));
+
+		int Iterator = 0;
+		int ArgC = ArgV.Length;
+		while (Iterator < ArgC)
+		{
+			O.Print (ArgV[Iterator].ToString ());
+			switch (ArgV[Iterator])
+			{
+				case "--encrypt":
+					Iterator += 1;
+
+					Upsert (ref UserProvidedConfiguration, "Mode", new GlobalConfigurationSettings (ECryptMode.Encrypt));
+					break;
+
+				case "--decrypt":
+					Iterator += 1;
+
+					Upsert (ref UserProvidedConfiguration, "Mode", new GlobalConfigurationSettings (ECryptMode.Decrypt));
+					break;
+
+				case "--inbound":
+					Iterator += 1;
+
+					if (!(Iterator < ArgC))
+					{
+						O.Print ("Option --inbound requires one argument!", ConsoleColor.Red);
+						break;
+					}
+
+					Upsert (ref UserProvidedConfiguration, "Inbound", new GlobalConfigurationSettings (ArgV[Iterator]));
+
+					Iterator += 1;
+					break;
+
+				case "--outbound":
+					Iterator += 1;
+
+					if (!(Iterator < ArgC))
+					{
+						O.Print ("Option --outbound requires one argument!", ConsoleColor.Red);
+						break;
+					}
+
+					Upsert (ref UserProvidedConfiguration, "Outbound", new GlobalConfigurationSettings (ArgV[Iterator]));
+
+					Iterator += 1;
+					break;
+
+				case "--key":
+					Iterator += 1;
+
+					if (!(Iterator < ArgC))
+					{
+						O.Print ("Option --key requires one argument!", ConsoleColor.Red);
+						break;
+					}
+
+					Upsert (ref UserProvidedConfiguration, "Key", new GlobalConfigurationSettings (ArgV[Iterator]));
+
+					Iterator += 1;
+					break;
+			}
+		}
+
+		return UserProvidedConfiguration;
+	}
+
+	static void Upsert(ref Dictionary<string, GlobalConfigurationSettings> UserProvidedConfiguration, string Option, GlobalConfigurationSettings Value)
+	{
+		if (UserProvidedConfiguration.ContainsKey (Option))
+			UserProvidedConfiguration[Option] = Value;
+		else
+			UserProvidedConfiguration.Add(Option, Value);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static bool VerifyCommandLineArguments (Dictionary<string, GlobalConfigurationSettings> Check)
+	{
+		EValidation Validation = EValidation.None;
+		if (!Check.ContainsKey ("Mode"))
+			Validation |= EValidation.Mode;
+		if (!Check.ContainsKey ("Inbound"))
+			Validation |= EValidation.Inbound;
+		if (!Check.ContainsKey ("Key"))
+			Validation |= EValidation.Key;
+
+		if ((int)(Validation & EValidation.Mode) > 1)
+			O.Print ("Missing Mode");
+		if ((int)(Validation & EValidation.Inbound) > 1)
+			O.Print ("Missing Inbound");
+		if ((int)(Validation & EValidation.Key) > 1)
+			O.Print ("Missing Key");
+
+		return Validation == EValidation.None;
+	}
+
+	static void PrintUsage ()
+	{
+		StringBuilder SB = new StringBuilder ();
+		SB.AppendLine ();
+		SB.Append ("cencrypt [--encrypt|--decrypt] --inbound <FILE> --key <KEY>");
+		SB.AppendLine ();
+		O.Print (SB.ToString ());
+	}
+}
+
+enum EValidation : int
+{
+	None = 0,
+	Mode = 1,
+	Inbound = 2,
+	Key = 4
+}
+
+enum ECryptMode
+{
+	None,
+	Encrypt,
+	Decrypt
+}
+
+public struct GlobalConfigurationSettings
+{
+	public Type T;
+	public object Value;
+
+	public GlobalConfigurationSettings (object Value) : this ()
+	{
+		this.Value = Value;
+		T = Value.GetType ();
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public R GetValue<R>()
+	{
+		if (Value.TryCast<R> (out R Casted))
+			return Casted;
+		return default (R);
+	}
+}
+
+public static class ObjectExtensions
+{
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool Is<T>(this object O) => O is T || O.GetType() == typeof(T);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool Is<T>(this object O, out T Casted)
+	{
+		Casted = O.Cast<T>();
+		return Casted != null;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool TryCast<T>(this object O, out T Casted) => O.Is<T>(out Casted);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static object Cast(this object O, Type Type) => Convert.ChangeType(O, Type);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static T Cast<T>(this object O)
+	{
+		return O is T R
+			? R
+			: (T)Convert.ChangeType(O, typeof(T));
+	}
+}
+
+public static class O
+{
+	public static void Print (string Content, ConsoleColor FColour = ConsoleColor.Gray, ConsoleColor BColour = ConsoleColor.Black)
+	{
+		SetColours (FColour, BColour);
+		Console.WriteLine (Content);
+		ResetColours ();
+	}
+
+	public static void SetColours (ConsoleColor FColour, ConsoleColor BColour = ConsoleColor.Black)
+	{
+		Console.ForegroundColor = FColour;
+		Console.BackgroundColor = BColour;
+	}
+
+	public static void ResetColours()
+	{
+		SetColours (ConsoleColor.Gray);
+	}
+
+	[MethodImpl (MethodImplOptions.AggressiveInlining)]
+	public static bool FileExists (string Path, string NameOfFile)
+	{
+		return File.Exists (Path + NameOfFile);
+	}
+}
+
+public enum EWriteMode
+{
+	Append,
+	Overwrite
+}
