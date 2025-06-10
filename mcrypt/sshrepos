@@ -1,0 +1,11 @@
+git@github.com:uts-itd/terraform-aws-acm.git
+git@github.com:uts-itd/tf-aws-apigateway-v2.git
+
+git@github.com:uts-itd/tf-aws-cloudwatch.git
+git@github.com:uts-itd/tf-data-plane-cloudwatch.git
+
+git@github.com:uts-itd/tf-aws-module-data-plane-configuration.git
+git@github.com:uts-itd/tf-aws-eventbridge.git
+
+git@github.com:uts-itd/tf-aws-lambda.git
+git@github.com:uts-itd/tf-data-plane-lambda.git
