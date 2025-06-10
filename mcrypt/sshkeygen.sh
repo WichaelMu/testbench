@@ -18,7 +18,8 @@ exec_generate_key_pair() {
   local KEY_PATH="$KEY_DIR/$KEY_NAME"
 
   ssh-keygen -t ed25519 -C "$REPO_STRING" -f "$KEY_PATH" -N "" && \
-    echo "[INFO] SSH key generated: $KEY_PATH"
+    echo "[INFO] SSH key generated: $KEY_PATH" && \
+    echo ""
 }
 
 exec_generator_main() {
