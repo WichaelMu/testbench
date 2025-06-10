@@ -16,15 +16,16 @@ class FileEncrypto
 
 	static int Main (string[] args)
 	{
-		O.SetColours (ConsoleColor.Black, ConsoleColor.White);
 		Settings = ParseCommandLineArguments (args);
 
+		Dbg ("Verifying Arguments...");
 		if (!VerifyCommandLineArguments (Settings))
 		{
 			PrintUsage ();
 			return 1;
 		}
 
+		Dbg ("Converting Arguments...");
 		ECryptMode Mode = Settings["Mode"].GetValue<ECryptMode> ();
 		string InputPath = Settings["Inbound"].GetValue<string> ();
 		string OutputPath = Settings["Outbound"].GetValue<string> ();
@@ -32,13 +33,29 @@ class FileEncrypto
 
 		try
 		{
+			if (!O.FileExists ("", InputPath))
+			{
+				O.Print ($"The file supplied to --inbound does not exist!\n\t--inbound {InputPath}");
+				return 1;
+			}
+
+			if (O.FileExists ("", OutputPath))
+			{
+				O.Print ($"The file supplied to --outbound already exists!\n\t--outbound {OutputPath}");
+				return 1;
+			}
+
 			switch (Mode)
 			{
 				case ECryptMode.Encrypt:
+					Dbg ("Encrypting...");
+
 					EncryptFile (InputPath, OutputPath, Password);
 					Console.WriteLine ("Encrypt complete.");
 					break;
 				case ECryptMode.Decrypt:
+					Dbg ("Decrypting...");
+
 					DecryptFile (InputPath, OutputPath, Password);
 					Console.WriteLine ("Decrypt complete.");
 					break;
@@ -50,6 +67,7 @@ class FileEncrypto
 			return 1;
 		}
 
+		Dbg ("Terminate with 0.");
 		return 0;
 	}
 
@@ -199,7 +217,6 @@ class FileEncrypto
 		int ArgC = ArgV.Length;
 		while (Iterator < ArgC)
 		{
-			O.Print (ArgV[Iterator].ToString ());
 			switch (ArgV[Iterator])
 			{
 				case "--encrypt":
@@ -220,6 +237,11 @@ class FileEncrypto
 					if (!(Iterator < ArgC))
 					{
 						O.Print ("Option --inbound requires one argument!", ConsoleColor.Red);
+						break;
+					}
+
+					if (!O.FileExists ("", ArgV[Iterator]))
+					{
 						break;
 					}
 
@@ -251,7 +273,18 @@ class FileEncrypto
 						break;
 					}
 
+					if (O.FileExists ("", ArgV[Iterator]))
+					{
+						break;
+					}
+
 					Upsert (ref UserProvidedConfiguration, "Key", new GlobalConfigurationSettings (ArgV[Iterator]));
+
+					Iterator += 1;
+					break;
+
+				case "--debug":
+					Upsert (ref UserProvidedConfiguration, "Debug", new GlobalConfigurationSettings (true));
 
 					Iterator += 1;
 					break;
@@ -280,11 +313,11 @@ class FileEncrypto
 		if (!Check.ContainsKey ("Key"))
 			Validation |= EValidation.Key;
 
-		if ((int)(Validation & EValidation.Mode) > 1)
+		if ((int)(Validation & EValidation.Mode) > 0)
 			O.Print ("Missing Mode");
-		if ((int)(Validation & EValidation.Inbound) > 1)
+		if ((int)(Validation & EValidation.Inbound) > 0)
 			O.Print ("Missing Inbound");
-		if ((int)(Validation & EValidation.Key) > 1)
+		if ((int)(Validation & EValidation.Key) > 0)
 			O.Print ("Missing Key");
 
 		return Validation == EValidation.None;
@@ -297,6 +330,12 @@ class FileEncrypto
 		SB.Append ("cencrypt [--encrypt|--decrypt] --inbound <FILE> --key <KEY>");
 		SB.AppendLine ();
 		O.Print (SB.ToString ());
+	}
+
+	static void Dbg (string Message, ConsoleColor FColour = ConsoleColor.Cyan, ConsoleColor BColour = ConsoleColor.Black)
+	{
+		if (Settings["Debug"].GetValue<bool> ())
+			O.Print (Message, FColour, BColour);
 	}
 }
 
