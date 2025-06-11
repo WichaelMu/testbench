@@ -28,7 +28,7 @@ exec_generator_main() {
     echo "[USAGE] Provide a list of repository strings as arguments."
     echo "Example: $0 \"git@github.com:uts-itd/repo1.git\" \"git@github.com:uts-itd/repo2.git\""
     echo ""
-    echo "./sshkeygen.sh \$(paste -s -d '\" ' sshreposfile)"
+    echo "./sshkeygen.sh \$(paste -s -d ' ' sshreposfile)"
     return 1
   fi
 
