@@ -26,10 +26,10 @@ class FileEncrypto
 		}
 
 		Dbg ("Converting Arguments...");
-		ECryptMode Mode = Settings["Mode"].GetValue<ECryptMode> ();
-		string InputPath = Settings["Inbound"].GetValue<string> ();
-		string OutputPath = Settings["Outbound"].GetValue<string> ();
-		string Password = Settings["Key"].GetValue<string> ();
+		ECryptMode Mode = GetSetting<ECryptMode> (Mode);
+		string InputPath = GetSetting<string> (Inbound);
+		string OutputPath = GetSetting<string> (Outbound);
+		string Password = GetSetting<string> (Key)
 
 		try
 		{
@@ -71,8 +71,49 @@ class FileEncrypto
 		return 0;
 	}
 
-	static void EncryptFile (string InputPath, string OutputPath, string Password)
+	static int EncryptMultiple (string[] InputPaths)
 	{
+		int ReturnCode = EncryptFile (s, Path.Combine (OutputPath, s), Password);
+		if (ReturnCode != 0)
+		{
+			if (!GetSetting<bool> (Skip))
+			{
+				O.Print ($"Error Encrypting {s}!\n--skip not specified. Terminating", ConsoleColor.Red);
+				return ReturnCode;
+			}
+			else
+			{
+				O.Print ($"Error Encrypting {s}!\n--skip specified. Skipping", ConsoleColor.Yellow);
+			}
+		}
+
+		return 0;
+	}
+
+	static int EncryptFile (string InputPath, string OutputPath, string Password)
+	{
+		if (O.IsDirectory (InputPath))
+		{
+			string[] AllEntriesInDirectory = O.GetAllEntriesInDirectory (InputPath);
+			if (!O.IsDirectory (OutputPath) && !O.FileExists (OutputPath))
+			{
+				Directory.CreateDirectory (OutputPath);
+			}
+			else
+			{
+				O.Print ("--outbound is already exists or is a file!", ConsoleColor.Red);
+				return 1;
+			}
+
+			return EncryptMultiple (AllEntriesInDirectory);
+		}
+
+		if (InputPath.Contains ("*") || InputPath.Contains ("?"))
+		{
+			string[] WildcardEntriesInDirectory = O.GetWildcardEntriesInDirectory (InputPath, InputPath);
+			return EncryptMultiple (WildcardEntriesInDirectory);
+		}
+
 		byte[] Salt = RandomBytes (SaltSize);
 		byte[] IV = RandomBytes (IvSize);
 		byte[] Derived = DeriveKey (Password, Salt, KeySize * 2);
@@ -288,6 +329,12 @@ class FileEncrypto
 
 					Iterator += 1;
 					break;
+
+				case "--skip":
+					Upsert (ref UserProvidedConfiguration, "Skip", new GlobalConfigurationSettings (true));
+
+					Iterator += 1;
+					break;
 			}
 		}
 
@@ -334,8 +381,15 @@ class FileEncrypto
 
 	static void Dbg (string Message, ConsoleColor FColour = ConsoleColor.Cyan, ConsoleColor BColour = ConsoleColor.Black)
 	{
-		if (Settings["Debug"].GetValue<bool> ())
+		if (GetSetting("Debug", <bool> ())
 			O.Print (Message, FColour, BColour);
+	}
+
+	static T GetSetting<T> (string Key, T Type)
+	{
+		if (Settings.Containskey (Key))
+			return Settings[Key].GetValue <T> ();
+		return default (T);
 	}
 }
 
@@ -426,10 +480,38 @@ public static class O
 	{
 		return File.Exists (Path + NameOfFile);
 	}
+
+	[MethodImpl (MethodImplOptions.AggressiveInlining)]
+	public static bool IsDirectory (string Path)
+	{
+		return Directory.Exists (Path);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static string[] GetAllEntriesInDirectory (string FQPath, EDirectorySortOrder DirectorySortOrder = EDirectorySortOrder.Name)
+	{
+		return Directory.GetFiles (FQPath);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static string[] GetWildcardEntriesInDirectory (string FQPath, string WildcardExpression, EDirectorySortOrder DirectorySortOrder = EDirectorySortOrder.Name)
+	{
+		return Directory.GetFiles (FQPath, WildcardExpression);
+	}
+
 }
 
 public enum EWriteMode
 {
 	Append,
 	Overwrite
+}
+
+public enum EDirectorySortOrder
+{
+	Default = 0,
+	Ascending = 1,
+	Descending = 2,
+	Name = 4,
+	LastWriteTime = 8,
 }
