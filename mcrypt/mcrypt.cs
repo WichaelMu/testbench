@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-class FileEncrypto
+class FileEncryptor
 {
 	const int SaltSize = 32; // 256-bit
 	const int KeySize = 32;  // AES-256
@@ -26,14 +26,14 @@ class FileEncrypto
 		}
 
 		Dbg ("Converting Arguments...");
-		ECryptMode Mode = GetSetting<ECryptMode> (Mode);
-		string InputPath = GetSetting<string> (Inbound);
-		string OutputPath = GetSetting<string> (Outbound);
-		string Password = GetSetting<string> (Key)
+		ECryptMode Mode = GetSetting<ECryptMode> ("Mode");
+		string InputPath = GetSetting<string> ("Inbound");
+		string OutputPath = GetSetting<string> ("Outbound");
+		string Password = GetSetting<string> ("Key");
 
 		try
 		{
-			if (!O.FileExists ("", InputPath))
+			if (!O.FileExists ("", InputPath) && !O.IsDirectory (InputPath))
 			{
 				O.Print ($"The file supplied to --inbound does not exist!\n\t--inbound {InputPath}");
 				return 1;
@@ -71,19 +71,25 @@ class FileEncrypto
 		return 0;
 	}
 
-	static int EncryptMultiple (string[] InputPaths)
+	static int EncryptMultiple (string[] InputPaths, string OutputPath, string Password)
 	{
-		int ReturnCode = EncryptFile (s, Path.Combine (OutputPath, s), Password);
-		if (ReturnCode != 0)
+		foreach (string s in InputPaths)
 		{
-			if (!GetSetting<bool> (Skip))
+			O.Print (s);
+			string[] FQFileName = s.Split (Path.DirectorySeparatorChar);
+			string FileName = FQFileName[FQFileName.Length - 1];
+			int ReturnCode = EncryptFile (s, Path.Combine (OutputPath, FileName), Password);
+			if (ReturnCode != 0)
 			{
-				O.Print ($"Error Encrypting {s}!\n--skip not specified. Terminating", ConsoleColor.Red);
-				return ReturnCode;
-			}
-			else
-			{
-				O.Print ($"Error Encrypting {s}!\n--skip specified. Skipping", ConsoleColor.Yellow);
+				if (!GetSetting<bool> ("Skip"))
+				{
+					O.Print ($"Error Encrypting {s}!\n--skip not specified. Terminating", ConsoleColor.Red);
+					return ReturnCode;
+				}
+				else
+				{
+					O.Print ($"Error Encrypting {s}!\n--skip specified. Skipping", ConsoleColor.Yellow);
+				}
 			}
 		}
 
@@ -92,28 +98,33 @@ class FileEncrypto
 
 	static int EncryptFile (string InputPath, string OutputPath, string Password)
 	{
+		Dbg ($"EncryptFile ({InputPath}, {OutputPath}, Password) - Function entry...");
 		if (O.IsDirectory (InputPath))
 		{
+			Dbg ($"EncryptFile ({InputPath}, {OutputPath}, Password) - InputPath is a directory...");
 			string[] AllEntriesInDirectory = O.GetAllEntriesInDirectory (InputPath);
-			if (!O.IsDirectory (OutputPath) && !O.FileExists (OutputPath))
+			if (!O.IsDirectory (OutputPath) && !O.FileExists (OutputPath, ""))
 			{
+				Dbg ($"EncryptFile ({InputPath}, {OutputPath}, Password) - Creating directory...");
 				Directory.CreateDirectory (OutputPath);
 			}
 			else
 			{
-				O.Print ("--outbound is already exists or is a file!", ConsoleColor.Red);
+				O.Print ("--outbound already exists or is a file!", ConsoleColor.Red);
 				return 1;
 			}
 
-			return EncryptMultiple (AllEntriesInDirectory);
+			return EncryptMultiple (AllEntriesInDirectory, OutputPath, Password);
 		}
 
 		if (InputPath.Contains ("*") || InputPath.Contains ("?"))
 		{
+			Dbg ($"EncryptFile ({InputPath}, {OutputPath}, Password) - Wildcards found...");
 			string[] WildcardEntriesInDirectory = O.GetWildcardEntriesInDirectory (InputPath, InputPath);
-			return EncryptMultiple (WildcardEntriesInDirectory);
+			return EncryptMultiple (WildcardEntriesInDirectory, OutputPath, Password);
 		}
 
+		Dbg ($"EncryptFile ({InputPath}, {OutputPath}, Password) - Making encryption bits...");
 		byte[] Salt = RandomBytes (SaltSize);
 		byte[] IV = RandomBytes (IvSize);
 		byte[] Derived = DeriveKey (Password, Salt, KeySize * 2);
@@ -122,6 +133,7 @@ class FileEncrypto
 		Array.Copy (Derived, 0, AESKey, 0, KeySize);
 		Array.Copy (Derived, KeySize, HMACKey, 0, KeySize);
 
+		Dbg ($"EncryptFile ({InputPath}, {OutputPath}, Password) - AES...");
 		using (Aes AES = Aes.Create ())
 		{
 			AES.Key = AESKey;
@@ -153,6 +165,9 @@ class FileEncrypto
 				}
 			}
 		}
+
+		Dbg ($"EncryptFile ({InputPath}, {OutputPath}, Password) - return 0...");
+		return 0;
 	}
 	
 	static void DecryptFile (string InputPath, string OutputPath, string Password)
@@ -261,18 +276,21 @@ class FileEncrypto
 			switch (ArgV[Iterator])
 			{
 				case "--encrypt":
+					Dbg ("Processing --encrypt");
 					Iterator += 1;
 
 					Upsert (ref UserProvidedConfiguration, "Mode", new GlobalConfigurationSettings (ECryptMode.Encrypt));
 					break;
 
 				case "--decrypt":
+					Dbg ("Processing --decrypt");
 					Iterator += 1;
 
 					Upsert (ref UserProvidedConfiguration, "Mode", new GlobalConfigurationSettings (ECryptMode.Decrypt));
 					break;
 
 				case "--inbound":
+					Dbg ("Processing --inbound");
 					Iterator += 1;
 
 					if (!(Iterator < ArgC))
@@ -281,8 +299,9 @@ class FileEncrypto
 						break;
 					}
 
-					if (!O.FileExists ("", ArgV[Iterator]))
+					if (!O.FileExists ("", ArgV[Iterator]) && !O.IsDirectory (ArgV[Iterator]))
 					{
+						O.Print ($"The value given to option --inbound ({ArgV[Iterator]}) does not exist either as a file or a directory!", ConsoleColor.Red);
 						break;
 					}
 
@@ -292,6 +311,7 @@ class FileEncrypto
 					break;
 
 				case "--outbound":
+					Dbg ("Processing --outbound");
 					Iterator += 1;
 
 					if (!(Iterator < ArgC))
@@ -306,6 +326,7 @@ class FileEncrypto
 					break;
 
 				case "--key":
+					Dbg ("Processing --key");
 					Iterator += 1;
 
 					if (!(Iterator < ArgC))
@@ -327,10 +348,12 @@ class FileEncrypto
 				case "--debug":
 					Upsert (ref UserProvidedConfiguration, "Debug", new GlobalConfigurationSettings (true));
 
+					O.Print ("--debug flag set");
 					Iterator += 1;
 					break;
 
 				case "--skip":
+					Dbg ("Processing --skip");
 					Upsert (ref UserProvidedConfiguration, "Skip", new GlobalConfigurationSettings (true));
 
 					Iterator += 1;
@@ -381,13 +404,13 @@ class FileEncrypto
 
 	static void Dbg (string Message, ConsoleColor FColour = ConsoleColor.Cyan, ConsoleColor BColour = ConsoleColor.Black)
 	{
-		if (GetSetting("Debug", <bool> ())
-			O.Print (Message, FColour, BColour);
+		if (GetSetting<bool> ("Debug"))
+			O.Print ($"DEBUG - {Message}", FColour, BColour);
 	}
 
-	static T GetSetting<T> (string Key, T Type)
+	static T GetSetting<T> (string Key)
 	{
-		if (Settings.Containskey (Key))
+		if (Settings.ContainsKey (Key))
 			return Settings[Key].GetValue <T> ();
 		return default (T);
 	}
@@ -478,7 +501,7 @@ public static class O
 	[MethodImpl (MethodImplOptions.AggressiveInlining)]
 	public static bool FileExists (string Path, string NameOfFile)
 	{
-		return File.Exists (Path + NameOfFile);
+		return File.Exists (System.IO.Path.Combine (Path, NameOfFile));
 	}
 
 	[MethodImpl (MethodImplOptions.AggressiveInlining)]
