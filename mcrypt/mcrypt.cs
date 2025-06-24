@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-class FileEncryptor
+class MCrypt
 {
 	const int SaltSize = 32; // 256-bit
 	const int KeySize = 32;  // AES-256
@@ -75,7 +75,8 @@ class FileEncryptor
 	{
 		foreach (string s in InputPaths)
 		{
-			O.Print (s);
+			O.Print ($"Encrypting {s}...");
+
 			string[] FQFileName = s.Split (Path.DirectorySeparatorChar);
 			string FileName = FQFileName[FQFileName.Length - 1];
 			int ReturnCode = EncryptFile (s, Path.Combine (OutputPath, FileName), Password);
@@ -169,12 +170,66 @@ class FileEncryptor
 		Dbg ($"EncryptFile ({InputPath}, {OutputPath}, Password) - return 0...");
 		return 0;
 	}
-	
-	static void DecryptFile (string InputPath, string OutputPath, string Password)
+
+	static int DecryptDirectory (string[] InputPaths, string OutputPath, string Password)
 	{
+		foreach (string s in InputPaths)
+		{
+			O.Print ($"Decrypting {s}...");
+
+			string[] FQFileName = s.Split (Path.DirectorySeparatorChar);
+			if (FQFileName.Length == 0)
+			{
+				O.Print ($"Error Decrypting {s}!\nInputPath received a path without a parent directory.", ConsoleColor.Red);
+				return 1;
+			}
+
+			string FileName = FQFileName[FQFileName.Length - 1];
+			int ReturnCode = DecryptFile (s, Path.Combine (OutputPath, FileName), Password);
+
+			if (ReturnCode != 0)
+			{
+				if (!GetSetting<bool> ("Skip"))
+				{
+					O.Print ($"Error Decrypting {s}!\n--skip not specified. Terminating", ConsoleColor.Red);
+					return ReturnCode;
+				}
+				else
+				{
+					O.Print ($"Error Decrypting {s}!\n--skip specified. Skipping", ConsoleColor.Yellow);
+				}
+			}
+		}
+
+		return 0;
+	}
+	
+	static int DecryptFile (string InputPath, string OutputPath, string Password)
+	{
+		if (O.IsDirectory (InputPath))
+		{
+			string [] AllEntriesInDirectory = O.GetAllEntriesInDirectory (InputPath);
+
+			if (!O.IsDirectory (OutputPath) && !O.FileExists (OutputPath, ""))
+			{
+				Dbg ($"DecryptFile ({InputPath}, {OutputPath}, Password) - Creating directory...");
+				Directory.CreateDirectory (OutputPath);
+			}
+			else
+			{
+				O.Print ("--outbound already exists or is a file!", ConsoleColor.Red);
+				return 1;
+			}
+
+			return DecryptDirectory (AllEntriesInDirectory, OutputPath, Password);
+		}
+
 		byte[] FileBytes = File.ReadAllBytes (InputPath);
 		if (FileBytes.Length < SaltSize + IvSize + 32)
-			throw new InvalidDataException ("File too small to be valid.");
+		{
+			O.Print ($"InvalidDataException - File too small to be valid.", ConsoleColor.Red);
+			return 1;
+		}
 
 		byte[] Salt = new byte[SaltSize];
 		byte[] IV = new byte[IvSize];
@@ -198,7 +253,11 @@ class FileEncryptor
 			byte[] AuthData = Combine (Salt, IV, Ciphertext);
 			byte[] ComputedTag = HMAC.ComputeHash (AuthData);
 			if (!Compare (Tag, ComputedTag))
-				throw new CryptographicException ("HMAC verification failed. The file may be corrupted or the password is incorrect.");
+			{
+				Dbg ("CryptographicException - HMAC verification failed. The file may be corrupted or the password is incorrect.");
+				O.Print ("Wrong password!", ConsoleColor.Magenta);
+				return 1;
+			}
 		}
 
 		using (Aes AES = Aes.Create ())
@@ -215,6 +274,8 @@ class FileEncryptor
 				CryptoStream.CopyTo (FSOutput);
 			}
 		}
+
+		return 0;
 	}
 
 	static byte[] DeriveKey (string Password, byte[] Salt, int Length)
@@ -397,7 +458,7 @@ class FileEncryptor
 	{
 		StringBuilder SB = new StringBuilder ();
 		SB.AppendLine ();
-		SB.Append ("cencrypt [--encrypt|--decrypt] --inbound <FILE> --key <KEY>");
+		SB.Append ("mcrypt (--encrypt|--decrypt) --inbound FILE|DIRECTORY [--outbound FILE|DIRECTORY] --key KEY [--skip]");
 		SB.AppendLine ();
 		O.Print (SB.ToString ());
 	}
