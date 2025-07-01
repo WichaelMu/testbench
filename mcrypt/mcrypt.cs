@@ -328,7 +328,6 @@ class MCrypt
 	static Dictionary<string, GlobalConfigurationSettings> ParseCommandLineArguments(params string[] ArgV)
 	{
 		Dictionary<string, GlobalConfigurationSettings> UserProvidedConfiguration = new Dictionary<string, GlobalConfigurationSettings>();
-		Upsert (ref UserProvidedConfiguration, "Outbound", new GlobalConfigurationSettings ("OutResult"));
 
 		int Iterator = 0;
 		int ArgC = ArgV.Length;
@@ -409,7 +408,9 @@ class MCrypt
 				case "--debug":
 					Upsert (ref UserProvidedConfiguration, "Debug", new GlobalConfigurationSettings (true));
 
-					O.Print ("--debug flag set");
+					Settings = UserProvidedConfiguration;
+					Dbg ("--debug flag set");
+
 					Iterator += 1;
 					break;
 
@@ -422,6 +423,24 @@ class MCrypt
 			}
 		}
 
+		if (!UserProvidedConfiguration.ContainsKey ("Outbound"))
+		{
+			Dbg ("No --outbound set. Defaulting...");
+			string RequestedOperation = UserProvidedConfiguration.ContainsKey ("Mode")
+				? UserProvidedConfiguration["Mode"].GetValue<ECryptMode> () == ECryptMode.Encrypt
+					? "encrypted"
+					: "decrypted"
+				: "MCRYPT";
+
+			string DefaultOutbound = UserProvidedConfiguration.ContainsKey ("Inbound")
+				? $"{UserProvidedConfiguration["Inbound"].GetValue<string> ()}.{RequestedOperation}"
+				: "OutResult";
+
+			Dbg ($"--outbound Defaulted. RequestedOperation: {RequestedOperation} | DefaultOutbound: {DefaultOutbound}");
+			Upsert (ref UserProvidedConfiguration, "Outbound", new GlobalConfigurationSettings (DefaultOutbound));
+		}
+
+		Dbg ("ParseCommandLineArguments () Complete.");
 		return UserProvidedConfiguration;
 	}
 
@@ -430,7 +449,7 @@ class MCrypt
 		if (UserProvidedConfiguration.ContainsKey (Option))
 			UserProvidedConfiguration[Option] = Value;
 		else
-			UserProvidedConfiguration.Add(Option, Value);
+			UserProvidedConfiguration.Add (Option, Value);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -463,16 +482,26 @@ class MCrypt
 		O.Print (SB.ToString ());
 	}
 
-	static void Dbg (string Message, ConsoleColor FColour = ConsoleColor.Cyan, ConsoleColor BColour = ConsoleColor.Black)
+	static void Dbg (string Message, ConsoleColor FColour = ConsoleColor.Cyan, ConsoleColor BColour = ConsoleColor.Black, bool bRetrievePrimitively = false)
 	{
-		if (GetSetting<bool> ("Debug"))
-			O.Print ($"DEBUG - {Message}", FColour, BColour);
+		if (!bRetrievePrimitively)
+		{
+			if (GetSetting<bool> ("Debug"))
+				O.Print ($"DEBUG - {Message}", FColour, BColour);
+		}
+		else
+		{
+			if (Settings.ContainsKey ("Debug"))
+				O.Print ($"DEBUG - {Message}", FColour, BColour);
+		}
 	}
 
 	static T GetSetting<T> (string Key)
 	{
 		if (Settings.ContainsKey (Key))
-			return Settings[Key].GetValue <T> ();
+			return Settings[Key].GetValue<T> ();
+
+		Dbg ($"Defaulting {Key}", bRetrievePrimitively: true);
 		return default (T);
 	}
 }
