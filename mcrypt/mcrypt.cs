@@ -1,9 +1,10 @@
 using System;
 using System.IO;
+using System.Text;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 class MCrypt
 {
@@ -432,9 +433,17 @@ class MCrypt
 					: "decrypted"
 				: "MCRYPT";
 
-			string DefaultOutbound = UserProvidedConfiguration.ContainsKey ("Inbound")
+			string InboundParam = UserProvidedConfiguration.ContainsKey ("Inbound")
 				? $"{UserProvidedConfiguration["Inbound"].GetValue<string> ()}.{RequestedOperation}"
 				: "OutResult";
+
+			string[] NameSplit = InboundParam.Split (Path.DirectorySeparatorChar);
+			string FileNamePart = (NameSplit.Length == 0)
+				? NameSplit[0]
+				: NameSplit[NameSplit.Length - 1];
+
+			string PWD = Directory.GetCurrentDirectory ();
+			string DefaultOutbound = $"{PWD}{Path.DirectorySeparatorChar}{FileNamePart}";
 
 			Dbg ($"--outbound Defaulted. RequestedOperation: {RequestedOperation} | DefaultOutbound: {DefaultOutbound}");
 			Upsert (ref UserProvidedConfiguration, "Outbound", new GlobalConfigurationSettings (DefaultOutbound));
