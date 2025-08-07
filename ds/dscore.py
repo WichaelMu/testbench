@@ -43,10 +43,10 @@ def set_environment (environment):
     global USE_PROD
     global ENVIRONMENT
 
-    match environment:
-        case 'PROD' | True:
+    match environment.upper ():
+        case 'PROD':
             USE_PROD = True
-        case 'NONPROD' | True:
+        case 'NONPROD':
             USE_PROD = False
         case _:
             raise Exception ('what')
@@ -155,11 +155,13 @@ def json_to_df (json, explode_on):
 def execute_parallel_requests (target_url, page_range, max_pages, extract_key, this_is_parallel = False):
     def execute_request (page):
         # Sorry, I think I'm about to throw up.
-        time.sleep (2)
+        # time.sleep (2)
 
         print (F'Current Page: {page} out of {max_pages}')
         response = make_get_request (F'{target_url}{page}')
         return response[extract_key]
+
+        print ('Skipping! {extract_key} not found!\nRequested: {target_url}{page}\n\tValid keys are {response.keys ()}')
 
     if (this_is_parallel):
         return pseq (page_range).map (lambda p: execute_request (p)).reduce (lambda x, y: x + y, []).to_list ()
