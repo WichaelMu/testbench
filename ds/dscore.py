@@ -136,6 +136,36 @@ def make_post_request (api_url, payload, raise_on_error=True):
 def fexists (fpath):
     return os.path.isfile (fpath)
 
+GENERATED_PARENT = 'generated'
+def save_generated (program_name, key, data):
+    generated_fq_path = os.path.join (GENERATED_PARENT, program_name, F'{get_wenvironment ()}-{key}.json')
+    write_json (generated_fq_path, data)
+    return generated_fq_path
+
+def load_generated (program_name, key):
+    fq_key = F'{get_wenvironment ()}-{key}.json'
+
+    try:
+        generated_fq_path = os.path.join (GENERATED_PARENT, program_name, fq_key)
+        print (F'Loading {fq_key}')
+        loaded = load_json (generated_fq_path)
+        return loaded
+
+    except Exception as e:
+        print (F'\tFailed loading {fq_key}')
+        return []
+
+def has_generated (program_name, key):
+    if (not os.path.isdir (GENERATED_PARENT)):
+        return False
+
+    program_directory = os.path.join (GENERATED_PARENT, program_name)
+    if (not os.path.isdir (program_directory)):
+        return False
+
+    generated_fq_path = os.path.join (program_directory, F'{get_wenvironment ()}-{key}.json')
+    return fexists (generated_fq_path)
+
 def write_json (path, data):
     with open (path, 'w') as w:
         json.dump (data, w)
