@@ -10,6 +10,12 @@ PROGRAM_NAME = os.path.basename (__file__).split ('.')[0]
 KENVIRONMENT = 'environment'
 KUSE_GENERATED = 'use-generated'
 
+USAGE_AND_OPTIONS = F'''
+Options:
+    --environment [PROD|NONPROD]
+    --no-generated
+'''
+
 def parse_argv () -> dict[str, str]:
     argv = sys.argv[1:]
     argc = len (argv)
@@ -24,11 +30,11 @@ def parse_argv () -> dict[str, str]:
                 return { KENVIRONMENT: argv[iterator] }, iterator
 
             case '--no-generated':
-                print ('--no-generated is not yet supported.')
                 return { KUSE_GENERATED: False }, iterator
 
             case '?' | '--help' | 'help' | '__HELP__':
-                print ('Usage:')
+                print (USAGE_AND_OPTIONS)
+                sys.exit (0)
                 return {}, iterator
 
             case _:
@@ -99,8 +105,8 @@ def make_request (full_url, extract_key, affix = {}):
 
     return affixed_initial_request
 
-def get_course_subjects (base_url, course_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'course-subjects-{course_code}')):
+def get_course_subjects (base_url, course_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'course-subjects-{course_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'course-subjects-{course_code}')
 
     full_url = F'{base_url}/courses/{course_code}/subjects'
@@ -110,8 +116,8 @@ def get_course_subjects (base_url, course_code):
     dsc.save_generated (PROGRAM_NAME, F'course-subjects-{course_code}', result)
     return result
 
-def get_course_majors (base_url, course_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'course-majors-{course_code}')):
+def get_course_majors (base_url, course_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'course-majors-{course_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'course-majors-{course_code}')
 
     full_url = F'{base_url}/courses/{course_code}/majors'
@@ -121,8 +127,8 @@ def get_course_majors (base_url, course_code):
     dsc.save_generated (PROGRAM_NAME, F'course-majors-{course_code}', result)
     return result
 
-def get_course_submajors (base_url, course_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'course-submajors-{course_code}')):
+def get_course_submajors (base_url, course_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'course-submajors-{course_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'course-submajors-{course_code}')
 
     full_url = F'{base_url}/courses/{course_code}/submajors'
@@ -132,8 +138,8 @@ def get_course_submajors (base_url, course_code):
     dsc.save_generated (PROGRAM_NAME, F'course-submajors-{course_code}', result)
     return result
 
-def get_course_substructures (base_url, course_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'course-substructures-{course_code}')):
+def get_course_substructures (base_url, course_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'course-substructures-{course_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'course-substructures-{course_code}')
 
     full_url = F'{base_url}/courses/{course_code}/substructures'
@@ -143,8 +149,8 @@ def get_course_substructures (base_url, course_code):
     dsc.save_generated (PROGRAM_NAME, F'course-substructures-{course_code}', result)
     return result
 
-def get_subject_majors (base_url, subject_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'subject-majors-{subject_code}')):
+def get_subject_majors (base_url, subject_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'subject-majors-{subject_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'subject-majors-{subject_code}')
 
     full_url = F'{base_url}/subjects/{subject_code}/majors'
@@ -154,8 +160,8 @@ def get_subject_majors (base_url, subject_code):
     dsc.save_generated (PROGRAM_NAME, F'subject-majors-{subject_code}', result)
     return result
 
-def get_subject_courses (base_url, subject_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'subject-courses-{subject_code}')):
+def get_subject_courses (base_url, subject_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'subject-courses-{subject_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'subject-courses-{subject_code}')
 
     full_url = F'{base_url}/subjects/{subject_code}/courses'
@@ -165,8 +171,8 @@ def get_subject_courses (base_url, subject_code):
     dsc.save_generated (PROGRAM_NAME, F'subject-courses-{subject_code}', result)
     return result
 
-def get_major_courses (base_url, major_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'major-courses-{major_code}')):
+def get_major_courses (base_url, major_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'major-courses-{major_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'major-courses-{major_code}')
 
     full_url = F'{base_url}/majors/{major_code}/courses'
@@ -176,8 +182,8 @@ def get_major_courses (base_url, major_code):
     dsc.save_generated (PROGRAM_NAME, F'major-courses-{major_code}', result)
     return result
 
-def get_major_subjects (base_url, major_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'major-subjects-{major_code}')):
+def get_major_subjects (base_url, major_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'major-subjects-{major_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'major-subjects-{major_code}')
 
     full_url = F'{base_url}/majors/{major_code}/subjects'
@@ -187,8 +193,8 @@ def get_major_subjects (base_url, major_code):
     dsc.save_generated (PROGRAM_NAME, F'major-subjects-{major_code}', result)
     return result
 
-def get_major_submajors (base_url, major_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'major-submajors-{major_code}')):
+def get_major_submajors (base_url, major_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'major-submajors-{major_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'major-submajors-{major_code}')
 
     full_url = F'{base_url}/majors/{major_code}/submajors'
@@ -198,8 +204,8 @@ def get_major_submajors (base_url, major_code):
     dsc.save_generated (PROGRAM_NAME, F'major-submajors-{major_code}', result)
     return result
 
-def get_major_streams (base_url, major_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'major-streams-{major_code}')):
+def get_major_streams (base_url, major_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'major-streams-{major_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'major-streams-{major_code}')
 
     full_url = F'{base_url}/majors/{major_code}/streams'
@@ -209,8 +215,8 @@ def get_major_streams (base_url, major_code):
     dsc.save_generated (PROGRAM_NAME, F'major-streams-{major_code}', result)
     return result
 
-def get_submajor_subjects (base_url, submajor_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'submajor-subjects-{submajor_code}')):
+def get_submajor_subjects (base_url, submajor_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'submajor-subjects-{submajor_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'submajor-subjects-{submajor_code}')
 
     full_url = F'{base_url}/submajors/{submajor_code}/subjects'
@@ -220,8 +226,8 @@ def get_submajor_subjects (base_url, submajor_code):
     dsc.save_generated (PROGRAM_NAME, F'submajor-subjects-{submajor_code}', result)
     return result
 
-def get_submajor_courses (base_url, submajor_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'submajor-courses-{submajor_code}')):
+def get_submajor_courses (base_url, submajor_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'submajor-courses-{submajor_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'submajor-courses-{submajor_code}')
 
     full_url = F'{base_url}/submajors/{submajor_code}/courses'
@@ -231,8 +237,8 @@ def get_submajor_courses (base_url, submajor_code):
     dsc.save_generated (PROGRAM_NAME, F'submajor-courses-{submajor_code}', result)
     return result
 
-def get_submajor_streams (base_url, submajor_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'submajor-streams-{submajor_code}')):
+def get_submajor_streams (base_url, submajor_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'submajor-streams-{submajor_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'submajor-streams-{submajor_code}')
 
     full_url = F'{base_url}/submajors/{submajor_code}/streams'
@@ -242,8 +248,8 @@ def get_submajor_streams (base_url, submajor_code):
     dsc.save_generated (PROGRAM_NAME, F'submajor-streams-{submajor_code}', result)
     return result
 
-def get_submajor_majors (base_url, submajor_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'submajor-majors-{submajor_code}')):
+def get_submajor_majors (base_url, submajor_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'submajor-majors-{submajor_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'submajor-majors-{submajor_code}')
 
     full_url = F'{base_url}/submajors/{submajor_code}/majors'
@@ -253,8 +259,8 @@ def get_submajor_majors (base_url, submajor_code):
     dsc.save_generated (PROGRAM_NAME, F'submajor-majors-{submajor_code}', result)
     return result
 
-def get_substructure_streams (base_url, substructure_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'substructure-streams-{substructure_code}')):
+def get_substructure_streams (base_url, substructure_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'substructure-streams-{substructure_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'substructure-streams-{substructure_code}')
 
     full_url = F'{base_url}/substructures/{substructure_code}/streams'
@@ -264,8 +270,8 @@ def get_substructure_streams (base_url, substructure_code):
     dsc.save_generated (PROGRAM_NAME, F'substructure-streams-{substructure_code}', result)
     return result
 
-def get_substructure_submajors (base_url, substructure_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'substructure-submajors-{substructure_code}')):
+def get_substructure_submajors (base_url, substructure_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'substructure-submajors-{substructure_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'substructure-submajors-{substructure_code}')
 
     full_url = F'{base_url}/substructures/{substructure_code}/submajors'
@@ -275,8 +281,8 @@ def get_substructure_submajors (base_url, substructure_code):
     dsc.save_generated (PROGRAM_NAME, F'substructure-submajors-{substructure_code}', result)
     return result
 
-def get_substructure_majors (base_url, substructure_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'substructure-majors-{substructure_code}')):
+def get_substructure_majors (base_url, substructure_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'substructure-majors-{substructure_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'substructure-majors-{substructure_code}')
 
     full_url = F'{base_url}/substructures/{substructure_code}/majors'
@@ -286,8 +292,8 @@ def get_substructure_majors (base_url, substructure_code):
     dsc.save_generated (PROGRAM_NAME, F'substructure-majors-{substructure_code}', result)
     return result
 
-def get_substructure_subjects (base_url, substructure_code):
-    if (dsc.has_generated (PROGRAM_NAME, F'substructure-subjects-{substructure_code}')):
+def get_substructure_subjects (base_url, substructure_code, options):
+    if (options[KUSE_GENERATED] and dsc.has_generated (PROGRAM_NAME, F'substructure-subjects-{substructure_code}')):
         return dsc.load_generated (PROGRAM_NAME, F'substructure-subjects-{substructure_code}')
 
     full_url = F'{base_url}/substructures/{substructure_code}/subjects'
@@ -320,92 +326,92 @@ def main ():
         .to_list ()
 
     course_subjects = pseq (course_codes) \
-        .map (lambda x: get_course_subjects (base_url, x)) \
+        .map (lambda x: get_course_subjects (base_url, x, options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     course_majors = pseq (course_codes) \
-        .map (lambda x: get_course_majors (base_url, x)) \
+        .map (lambda x: get_course_majors (base_url, x, options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     course_submajors = pseq (course_codes) \
-        .map (lambda x: get_course_submajors (base_url, x)) \
+        .map (lambda x: get_course_submajors (base_url, x, options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     course_substructures = pseq (course_codes) \
-        .map (lambda x: get_course_substructures (base_url, x)) \
+        .map (lambda x: get_course_substructures (base_url, x, options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     subject_majors = pseq (course_subjects) \
-        .map (lambda x: get_subject_majors (base_url, x['code'])) \
+        .map (lambda x: get_subject_majors (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     subject_courses = pseq (course_subjects) \
-        .map (lambda x: get_subject_courses (base_url, x['code'])) \
+        .map (lambda x: get_subject_courses (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     major_courses = pseq (course_majors) \
-        .map (lambda x: get_major_courses (base_url, x['code'])) \
+        .map (lambda x: get_major_courses (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     major_subjects = pseq (course_majors) \
-        .map (lambda x: get_major_subjects (base_url, x['code'])) \
+        .map (lambda x: get_major_subjects (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     major_submajors = pseq (course_majors) \
-        .map (lambda x: get_major_submajors (base_url, x['code'])) \
+        .map (lambda x: get_major_submajors (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     major_streams = pseq (course_majors) \
-        .map (lambda x: get_major_streams (base_url, x['code'])) \
+        .map (lambda x: get_major_streams (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     submajor_subjects = pseq (course_submajors) \
-        .map (lambda x: get_submajor_subjects (base_url, x['code'])) \
+        .map (lambda x: get_submajor_subjects (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     submajor_courses = pseq (course_submajors) \
-        .map (lambda x: get_submajor_courses (base_url, x['code'])) \
+        .map (lambda x: get_submajor_courses (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     submajor_streams = pseq (course_submajors) \
-        .map (lambda x: get_submajor_streams (base_url, x['code'])) \
+        .map (lambda x: get_submajor_streams (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     submajor_majors = pseq (course_submajors) \
-        .map (lambda x: get_submajor_majors (base_url, x['code'])) \
+        .map (lambda x: get_submajor_majors (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     substructure_streams = pseq (course_substructures) \
-        .map (lambda x: get_substructure_streams (base_url, x['code'])) \
+        .map (lambda x: get_substructure_streams (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     substructure_submajors = pseq (course_substructures) \
-        .map (lambda x: get_substructure_submajors (base_url, x['code'])) \
+        .map (lambda x: get_substructure_submajors (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     substructure_majors = pseq (course_substructures) \
-        .map (lambda x: get_substructure_majors (base_url, x['code'])) \
+        .map (lambda x: get_substructure_majors (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
     substructure_subjects = pseq (course_substructures) \
-        .map (lambda x: get_substructure_subjects (base_url, x['code'])) \
+        .map (lambda x: get_substructure_subjects (base_url, x['code'], options)) \
         .reduce (lambda x, y: x + y, []) \
         .to_list ()
 
