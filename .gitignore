@@ -162,6 +162,7 @@ cython_debug/
 *.swp
 *sfn.json
 Leganto/leganto
+mcrypt/mcrypt
 *.terraform*
 *.bak
 .megaignore
