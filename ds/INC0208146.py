@@ -9,6 +9,7 @@ import dscore as dsc
 PROGRAM_NAME = os.path.basename (__file__).split ('.')[0]
 KENVIRONMENT = 'environment'
 KUSE_GENERATED = 'use-generated'
+KINBOUND_FILE = 'inbound-file'
 
 USAGE_AND_OPTIONS = F'''
 Options:
@@ -29,6 +30,11 @@ def parse_argv () -> dict[str, str]:
 
                 return { KENVIRONMENT: argv[iterator] }, iterator
 
+            case '--inbound-file':
+                iterator += 1
+
+                return { KINBOUND_FILE: argv[iterator] }, iterator
+
             case '--no-generated':
                 return { KUSE_GENERATED: False }, iterator
 
@@ -42,7 +48,8 @@ def parse_argv () -> dict[str, str]:
 
     options = {
         KENVIRONMENT: 'NONPROD',
-        KUSE_GENERATED: True
+        KUSE_GENERATED: True,
+        KINBOUND_FILE: ''
     }
 
     iterator = 0
@@ -67,6 +74,7 @@ def read_xlsx_column (path: str, col_number: int = 1, sheet = 0, header = None, 
     if (col_number < 1):
         raise ValueError ("col_number must be 1 or greater")
 
+    print (F'Opening: {path}')
     s = pd.read_excel (path, sheet_name = sheet, usecols = [ col_number - 1 ], header = header).iloc[:, 0]
 
     if drop_blank:
@@ -320,7 +328,7 @@ def main ():
     if (not os.path.isdir (os.path.join (dsc.GENERATED_PARENT, PROGRAM_NAME))):
         os.mkdir (os.path.join (dsc.GENERATED_PARENT, PROGRAM_NAME))
 
-    course_codes = read_xlsx_column ('CommunicationCourses2025List.xlsx', 1, 0, None, True)
+    course_codes = read_xlsx_column (options[KINBOUND_FILE], 1, 0, None, True)
     course_codes = pseq (course_codes) \
         .filter (lambda x: is_probably_a_course_code (x)) \
         .to_list ()
