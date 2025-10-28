@@ -91,6 +91,11 @@ public class FFLinkRouter
             FFCommon.NotifyError("FF Link Router crashed", ex.Message);
             FFCommon.OpenLogsFolderFailSafe();
         }
+	finally
+	{
+		// Log an empty line on every Link Route.
+		FFCommon.LogEmpty ("FFLinkRouter");
+	}
     }
 
     private static string ExtractUrlArg(string[] args)

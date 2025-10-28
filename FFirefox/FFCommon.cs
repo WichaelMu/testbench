@@ -61,6 +61,16 @@ public static class FFCommon
 	    return DateTime.UtcNow.ToLocalTime ().ToString (Format);
     }
 
+    public static void LogEmpty (string Component)
+    {
+        try
+        {
+            string file = Path.Combine(GetLogsDir(), Component + "-" + GetLocalTime () + ".log");
+            File.AppendAllText(file, Environment.NewLine);
+        }
+        catch { }
+    }
+
     public static void Log(string component, string message)
     {
         try

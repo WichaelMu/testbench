@@ -22,6 +22,11 @@ public class FFFocusTracker
             FFCommon.NotifyError("FF Focus Tracker crashed", ex.Message);
             FFCommon.OpenLogsFolderFailSafe();
         }
+	finally
+	{
+		// Log an empty line on every Link Route.
+		FFCommon.LogEmpty ("FFFocusTracker");
+	}
     }
 
     private static void RunLoop()
