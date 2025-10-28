@@ -31,8 +31,8 @@ def get_from_date ():
     from_date = parser.isoparse (default_date.strftime (STRF_TIME))
     return from_date
 
-def check_defined_tables (incoming_tables):
-    defined = [
+def check_defined_tables (canvas_defined):
+    terraform_defined = [
         "content_participation_counts",
         "courses",
         "users",
@@ -46,7 +46,7 @@ def check_defined_tables (incoming_tables):
         "learning_outcome_question_results",
         "learning_outcomes",
         "assessment_questions",
-        "live_assessment_assessments",
+        "live_assessments_assessments",
         "assignments",
         "quizzes",
         "rubric_associations",
@@ -55,7 +55,6 @@ def check_defined_tables (incoming_tables):
         "lti_resource_links",
         "lti_line_items",
         "accounts",
-        "context_external_tools",
         "quiz_submissions",
         "score_statistics",
         "scores",
@@ -72,6 +71,7 @@ def check_defined_tables (incoming_tables):
         "lti_results",
         "originality_reports",
         "submission_comments",
+        "context_external_tools",
         "pseudonyms",
         "communication_channels",
         "sis_batches"
@@ -79,28 +79,25 @@ def check_defined_tables (incoming_tables):
 
     from functional import pseq
 
-    and_op = pseq (incoming_tables) \
-        .filter (lambda x: x in defined) \
+    and_op = pseq (canvas_defined) \
+        .filter (lambda x: x in terraform_defined) \
         .to_list ()
 
-    incoming_not_in_defined = pseq (incoming_tables) \
-        .filter (lambda x: x not in defined) \
+    incoming_not_in_defined = pseq (canvas_defined) \
+        .filter (lambda x: x not in terraform_defined) \
         .to_list ()
 
-    defined_not_in_incoming = pseq (defined) \
-        .filter (lambda x: x not in incoming_tables) \
+    terraform_not_in_canvas = pseq (terraform_defined) \
+        .filter (lambda x: x not in canvas_defined) \
         .to_list ()
 
-    print (F'length defined: {len (defined)}')
-    print (F'length incoming: {len (incoming_tables)}')
+    dsc.write_json ('/tmp/terraform-defined.json', terraform_defined)
+    dsc.write_json ('/tmp/canvas-defined.json', canvas_defined)
 
-
-    print (F'length and_op: {len (and_op)}')
-
-    print (defined_not_in_incoming)
+    print (terraform_not_in_canvas)
 
 async def fetch ():
-    secrets = dsc.load_json ('secrets.json')['CANVAS']
+    secrets       = dsc.load_json ('secrets.json')['CANVAS']
     client_id     = secrets['ClientId']
     client_secret = secrets['ClientSecret']
 
