@@ -1,434 +1,484 @@
-// Common.cs
-// Shared utilities for FocusTracker and LinkRouter
-// No "SmartOpen" anywhere.
-
+// FFCommon.cs (C#5-safe)
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 #if WINDOWS
-using Microsoft.Win32;
-using System.Management;
+using System.Management;         // WMI for CommandLine + ParentProcessId
+using System.Windows.Forms;      // NotifyIcon
+using System.Drawing;            // SystemIcons
 #endif
 
-public static class FAppPaths
+public static class FFCommon
 {
-    // Single switch to rename the app folder (logs/state). No branding here.
-    public const string AppDirName = "FF"; // lives under LocalApplicationData
-
-    public static string AppDir
-        => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDirName);
-
-    public static string LogCurrent
-        => Path.Combine(AppDir, "ff-current.log");
-
-    public static string LogPrev
-        => Path.Combine(AppDir, "ff-prev.log");
-
-    public static string StateFile
-        => Path.Combine(AppDir, "lastprofile.txt");
-
+    // ---------- Paths & logging ----------
+    public static string GetBaseDir()
+    {
 #if WINDOWS
-    public static string FirefoxBase
-        => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Mozilla\Firefox");
-#elif LINUX
-    public static string FirefoxBase
-        => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), ".mozilla", "firefox");
+        string baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(baseDir, "FF");
+#else
+        string xdg = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        if (string.IsNullOrEmpty(xdg))
+        {
+            string home = Environment.GetEnvironmentVariable("HOME");
+            if (string.IsNullOrEmpty(home)) home = ".";
+            xdg = Path.Combine(home, ".local", "share");
+        }
+        return Path.Combine(xdg, "FF");
 #endif
+    }
 
-    public static string ProfilesIni
-        => Path.Combine(FirefoxBase, "profiles.ini");
+    public static string GetLogsDir()
+    {
+        string d = Path.Combine(GetBaseDir(), "logs");
+        EnsureDirectory(d);
+        return d;
+    }
 
-    public static string InstallsIni
-        => Path.Combine(FirefoxBase, "installs.ini");
-}
+    public static string GetStateDir()
+    {
+        string d = Path.Combine(GetBaseDir(), "state");
+        EnsureDirectory(d);
+        return d;
+    }
 
-public static class FLog
-{
-    private static readonly Mutex LogMutex = new Mutex(false, @"Local\FF_Log");
+    public static string GetStateFile()
+    {
+        return Path.Combine(GetStateDir(), "focus_state.txt");
+    }
 
-    public static void RotateForNewSession()
+    public static void EnsureDirectory(string path)
+    {
+        if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+    }
+
+    public static string GetLocalTime (string Format = "yyyy-MM-dd")
+    {
+	    return DateTime.UtcNow.ToLocalTime ().ToString (Format);
+    }
+
+    public static void Log(string component, string message)
     {
         try
         {
-            Directory.CreateDirectory(FAppPaths.AppDir);
+            string file = Path.Combine(GetLogsDir(), component + "-" + GetLocalTime () + ".log");
+            File.AppendAllText(file, GetLocalTime ("o") + " " + message + Environment.NewLine);
+        }
+        catch { }
+    }
 
-            if (File.Exists(FAppPaths.LogPrev))
+    public static void LogException(string component, string context, Exception ex)
+    {
+        try
+        {
+            string file = Path.Combine(GetLogsDir(), component + "-" + GetLocalTime () + ".log");
+            StringBuilder sb = new StringBuilder();
+            sb.Append(GetLocalTime ("o")).Append(" ").Append(context).Append(": ")
+              .Append(ex.GetType().FullName).Append(": ").Append(ex.Message).AppendLine()
+              .Append(ex.StackTrace).AppendLine();
+            File.AppendAllText(file, sb.ToString());
+        }
+        catch { }
+    }
+
+    public static void OpenLogsFolderFailSafe()
+    {
+        try
+        {
+#if WINDOWS
+            Process.Start("explorer.exe", GetLogsDir());
+#else
+            TryStart("xdg-open", GetLogsDir());
+#endif
+        }
+        catch { }
+    }
+
+    public static void NotifyError(string title, string body)
+    {
+        try
+        {
+#if WINDOWS
+            using (NotifyIcon ni = new NotifyIcon())
             {
-                File.Delete(FAppPaths.LogPrev);
+                ni.Visible = true;
+                ni.Icon = SystemIcons.Information;
+                ni.BalloonTipTitle = title;
+                ni.BalloonTipText = body;
+                ni.ShowBalloonTip(3000);
+                System.Threading.Thread.Sleep(3200);
+                ni.Visible = false;
             }
+#else
+            TryStart("notify-send", title + "\n" + body);
+#endif
+        }
+        catch { }
+    }
 
-            if (File.Exists(FAppPaths.LogCurrent))
+    // ---------- Firefox profiles ----------
+    public class ProfileInfo { public string Name; public string PathOnDisk; public bool IsDefault; }
+
+    public static string GetProfilesIniPath()
+    {
+#if WINDOWS
+        string roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        return Path.Combine(roaming, "Mozilla", "Firefox", "profiles.ini");
+#else
+        string home = Environment.GetEnvironmentVariable("HOME");
+        if (string.IsNullOrEmpty(home)) home = ".";
+        return Path.Combine(home, ".mozilla", "firefox", "profiles.ini");
+#endif
+    }
+
+    public static List<ProfileInfo> ReadProfilesIni()
+    {
+        List<ProfileInfo> list = new List<ProfileInfo>();
+        try
+        {
+            string ini = GetProfilesIniPath();
+            if (!File.Exists(ini)) return list;
+
+            string[] lines = File.ReadAllLines(ini);
+            ProfileInfo current = null;
+            string baseDir = Path.GetDirectoryName(ini);
+            int i = 0;
+            while (i < lines.Length)
             {
-                try { File.Move(FAppPaths.LogCurrent, FAppPaths.LogPrev); }
-                catch
+                string line = lines[i].Trim();
+                if (line.StartsWith("[Profile", StringComparison.OrdinalIgnoreCase))
                 {
-                    try { File.Copy(FAppPaths.LogCurrent, FAppPaths.LogPrev, true); } catch {}
-                    try { File.Delete(FAppPaths.LogCurrent); } catch {}
+                    if (current != null) list.Add(current);
+                    current = new ProfileInfo();
                 }
-            }
-
-            WriteRaw("===== SESSION START " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " =====");
-        }
-        catch {}
-    }
-
-    public static void Write(string Tag, string Message)
-    {
-        try
-        {
-            Directory.CreateDirectory(FAppPaths.AppDir);
-
-            bool bLocked = LogMutex.WaitOne(500);
-            if (bLocked)
-            {
-                try { WriteRaw("[" + Tag + "] " + Message); }
-                finally { LogMutex.ReleaseMutex(); }
-            }
-        }
-        catch {}
-    }
-
-    private static void WriteRaw(string Message)
-    {
-        string Line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + Message + Environment.NewLine;
-        File.AppendAllText(FAppPaths.LogCurrent, Line);
-    }
-}
-
-public static class FState
-{
-    // Registry path on Windows (no branding)
-    private const string RegistryKeyPath = @"Software\FF";
-
-    public static void SetLastProfile(string ProfileName)
-    {
-        try
-        {
-            Directory.CreateDirectory(FAppPaths.AppDir);
-            File.WriteAllText(FAppPaths.StateFile, ProfileName ?? "");
-        }
-        catch {}
-
-#if WINDOWS
-        try
-        {
-            using (RegistryKey UserKey = Registry.CurrentUser.CreateSubKey(RegistryKeyPath))
-            {
-                UserKey.SetValue("LastProfile", ProfileName ?? "", RegistryValueKind.String);
-                UserKey.SetValue("LastProfileTimeUtc", DateTime.UtcNow.ToString("o"), RegistryValueKind.String);
-            }
-        }
-        catch {}
-#endif
-    }
-
-    public static string GetLastProfile()
-    {
-        try
-        {
-            if (File.Exists(FAppPaths.StateFile))
-            {
-                string Text = File.ReadAllText(FAppPaths.StateFile);
-                string Clean = (Text ?? "").Trim();
-                if (!string.IsNullOrEmpty(Clean)) { return Clean; }
-            }
-        }
-        catch {}
-
-#if WINDOWS
-        try
-        {
-            using (RegistryKey Key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath))
-            {
-                if (Key != null)
+                else if (current != null)
                 {
-                    object Value = Key.GetValue("LastProfile");
-                    if (Value != null)
+                    int eq = line.IndexOf('=');
+                    if (eq > 0)
                     {
-                        string Clean = Value.ToString();
-                        if (!string.IsNullOrEmpty(Clean)) { return Clean; }
+                        string key = line.Substring(0, eq).Trim();
+                        string val = line.Substring(eq + 1).Trim();
+                        if (string.Equals(key, "Name", StringComparison.OrdinalIgnoreCase)) current.Name = val;
+                        else if (string.Equals(key, "Path", StringComparison.OrdinalIgnoreCase))
+                        {
+                            bool isRelative = false;
+                            int j = i - 1;
+                            while (j >= 0 && j >= i - 5)
+                            {
+                                string l2 = lines[j].Trim();
+                                int eq2 = l2.IndexOf('=');
+                                if (eq2 > 0 && string.Equals(l2.Substring(0, eq2).Trim(), "IsRelative", StringComparison.OrdinalIgnoreCase))
+                                { isRelative = l2.Substring(eq2 + 1).Trim() == "1"; break; }
+                                j--;
+                            }
+                            current.PathOnDisk = isRelative ? Path.Combine(baseDir, val) : val;
+                        }
+                        else if (string.Equals(key, "Default", StringComparison.OrdinalIgnoreCase)) current.IsDefault = (val == "1");
                     }
                 }
+                i++;
             }
+            if (current != null) list.Add(current);
         }
-        catch {}
-#endif
-        return null;
-    }
-}
-
-public static class FFirefoxProfiles
-{
-    public class FProfile
-    {
-        public string Name;
-        public string Path;
-    }
-
-    public static List<FProfile> LoadAll()
-    {
-        List<FProfile> ProfileList = new List<FProfile>();
-
-        if (!File.Exists(FAppPaths.ProfilesIni))
-        {
-            return ProfileList;
-        }
-
-        string IniDirectory = Path.GetDirectoryName(FAppPaths.ProfilesIni);
-        string CurrentSection = null;
-        Dictionary<string, string> KeyValues =
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (string RawLine in File.ReadAllLines(FAppPaths.ProfilesIni))
-        {
-            string Line = RawLine.Trim();
-            if (Line.Length == 0 || Line.StartsWith(";")) { continue; }
-
-            if (Line.StartsWith("[") && Line.EndsWith("]"))
-            {
-                if (CurrentSection != null &&
-                    CurrentSection.StartsWith("Profile", StringComparison.OrdinalIgnoreCase) &&
-                    KeyValues.ContainsKey("Path"))
-                {
-                    ProfileList.Add(Build(IniDirectory, KeyValues));
-                }
-
-                CurrentSection = Line.Trim('[', ']');
-                KeyValues.Clear();
-                continue;
-            }
-
-            int EqualsIndex = Line.IndexOf('=');
-            if (EqualsIndex > 0)
-            {
-                string Key = Line.Substring(0, EqualsIndex).Trim();
-                string Value = Line.Substring(EqualsIndex + 1).Trim();
-                KeyValues[Key] = Value;
-            }
-        }
-
-        if (CurrentSection != null &&
-            CurrentSection.StartsWith("Profile", StringComparison.OrdinalIgnoreCase) &&
-            KeyValues.ContainsKey("Path"))
-        {
-            ProfileList.Add(Build(IniDirectory, KeyValues));
-        }
-
-        return ProfileList;
-    }
-
-    private static FProfile Build(string IniDirectory, Dictionary<string, string> KeyValues)
-    {
-        string Name = KeyValues.ContainsKey("Name") ? KeyValues["Name"] : null;
-        string PathRaw = (KeyValues["Path"] ?? "").Replace('/', Path.DirectorySeparatorChar);
-        bool bRelative = KeyValues.ContainsKey("IsRelative") && KeyValues["IsRelative"] == "1";
-        string AbsolutePath = bRelative ? Path.Combine(IniDirectory, PathRaw) : PathRaw;
-
-        FProfile Result = new FProfile();
-        Result.Name = Name ?? Path.GetFileName(AbsolutePath);
-        Result.Path = AbsolutePath;
-        return Result;
-    }
-
-    public static string MapPathToName(string AbsolutePath)
-    {
-        List<FProfile> AllProfiles = LoadAll();
-        foreach (FProfile Profile in AllProfiles)
-        {
-            if (string.Equals(Profile.Path, AbsolutePath, StringComparison.OrdinalIgnoreCase))
-            {
-                return Profile.Name;
-            }
-        }
-        return null;
-    }
-
-    public static string GetProfilePathByName(string ProfileName)
-    {
-        if (string.IsNullOrEmpty(ProfileName)) { return null; }
-        List<FProfile> All = LoadAll();
-        foreach (FProfile P in All)
-        {
-            if (P.Name.Equals(ProfileName, StringComparison.OrdinalIgnoreCase))
-            {
-                return P.Path;
-            }
-        }
-        return null;
+        catch (Exception ex) { LogException("FFCommon", "ReadProfilesIni", ex); }
+        return list;
     }
 
     public static string GetDefaultProfileName()
     {
-        if (!File.Exists(FAppPaths.InstallsIni)) { return null; }
-
-        string IniDirectory = Path.GetDirectoryName(FAppPaths.InstallsIni);
-        string CurrentSection = null;
-        Dictionary<string, string> KeyValues =
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (string RawLine in File.ReadAllLines(FAppPaths.InstallsIni))
+        try
         {
-            string Line = RawLine.Trim();
-            if (Line.Length == 0 || Line.StartsWith(";")) { continue; }
-
-            if (Line.StartsWith("[") && Line.EndsWith("]"))
+            List<ProfileInfo> info = ReadProfilesIni();
+            int k = 0;
+            while (k < info.Count)
             {
-                CurrentSection = Line.Trim('[', ']');
-                KeyValues.Clear();
-                continue;
+                if (info[k].IsDefault && !string.IsNullOrEmpty(info[k].Name)) return info[k].Name;
+                k++;
             }
-
-            int EqualsIndex = Line.IndexOf('=');
-            if (EqualsIndex <= 0) { continue; }
-
-            string Key = Line.Substring(0, EqualsIndex).Trim();
-            string Value = Line.Substring(EqualsIndex + 1).Trim();
-
-            if (Key.Equals("Default", StringComparison.OrdinalIgnoreCase))
-            {
-                string Relative = Value.Replace('/', Path.DirectorySeparatorChar);
-                string Absolute = Path.IsPathRooted(Relative) ? Relative : Path.Combine(IniDirectory, Relative);
-                string Name = MapPathToName(Absolute);
-                if (!string.IsNullOrEmpty(Name)) { return Name; }
-            }
+            if (info.Count > 0 && !string.IsNullOrEmpty(info[0].Name)) return info[0].Name;
         }
-        return null;
-    }
-}
-
-public static class FFirefoxPlatform
-{
-    public static string FindFirefoxExe()
-    {
-#if WINDOWS
-        string X64 = @"C:\Program Files\Mozilla Firefox\firefox.exe";
-        string X86 = @"C:\Program Files (x86)\Mozilla Firefox\firefox.exe";
-        if (File.Exists(X64)) { return X64; }
-        if (File.Exists(X86)) { return X86; }
-        return null;
-#else
-        return "firefox"; // rely on PATH
-#endif
+        catch (Exception ex) { LogException("FFCommon", "GetDefaultProfileName", ex); }
+        return "default";
     }
 
-    public static DateTime GetLockMTimeUtc(string ProfilePath)
+    // ---------- Focus state ----------
+    // focus_state.txt:
+    // LastFocusedProfile=<name>
+    // <profile>|<ticksUtc>
+    public static void LoadFocusState(out string lastFocusedProfile, out Dictionary<string, long> focusTicks)
     {
-        if (string.IsNullOrEmpty(ProfilePath)) { return DateTime.MinValue; }
-
-#if LINUX
-        string LockUnix = Path.Combine(ProfilePath, "lock");
-        string LockParent = Path.Combine(ProfilePath, "parent.lock");
-        DateTime T1 = File.Exists(LockUnix) ? File.GetLastWriteTimeUtc(LockUnix) : DateTime.MinValue;
-        DateTime T2 = File.Exists(LockParent) ? File.GetLastWriteTimeUtc(LockParent) : DateTime.MinValue;
-        return T1 > T2 ? T1 : T2;
-#else
-        string LockParent = Path.Combine(ProfilePath, "parent.lock");
-        try { return File.GetLastWriteTimeUtc(LockParent); } catch { return DateTime.MinValue; }
-#endif
-    }
-
-    public static bool IsProfileRunningByLocks(string ProfileName)
-    {
-        string ProfilePath = FFirefoxProfiles.GetProfilePathByName(ProfileName);
-        if (string.IsNullOrEmpty(ProfilePath)) { return false; }
-
-#if LINUX
-        if (File.Exists(Path.Combine(ProfilePath, "lock"))) { return true; }
-        if (File.Exists(Path.Combine(ProfilePath, "parent.lock"))) { return true; }
-        return false;
-#else
-        return File.Exists(Path.Combine(ProfilePath, "parent.lock"));
-#endif
-    }
-
-#if WINDOWS
-    public static string ProfileNameFromPidWindows(int Pid)
-    {
-        HashSet<int> Visited = new HashSet<int>();
-        int CurrentPid = Pid;
-
-        while (CurrentPid != 0 && !Visited.Contains(CurrentPid))
+        lastFocusedProfile = string.Empty;
+        focusTicks = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        try
         {
-            Visited.Add(CurrentPid);
-
-            ManagementObjectSearcher Searcher =
-                new ManagementObjectSearcher("SELECT ProcessId, ParentProcessId, CommandLine FROM Win32_Process WHERE ProcessId=" + CurrentPid.ToString());
-
-            foreach (ManagementObject ObjectRow in Searcher.Get())
+            string f = GetStateFile();
+            if (!File.Exists(f)) return;
+            string[] lines = File.ReadAllLines(f);
+            int i = 0;
+            while (i < lines.Length)
             {
-                string CommandLine = (ObjectRow["CommandLine"] ?? "").ToString();
-
-                Match ProfileMatch = Regex.Match(CommandLine, @"-P\s+""([^""]+)""");
-                if (!ProfileMatch.Success) { ProfileMatch = Regex.Match(CommandLine, @"-P\s+([^\s""]+)"); }
-                if (ProfileMatch.Success) { return ProfileMatch.Groups[1].Value; }
-
-                Match PathMatch = Regex.Match(CommandLine, @"-profile\s+""([^""]+)""");
-                if (!PathMatch.Success) { PathMatch = Regex.Match(CommandLine, @"-profile\s+([^\s""]+)"); }
-                if (PathMatch.Success)
+                string line = lines[i].Trim();
+                if (line.StartsWith("LastFocusedProfile=", StringComparison.Ordinal))
+                    lastFocusedProfile = line.Substring("LastFocusedProfile=".Length);
+                else if (line.Length > 0)
                 {
-                    string Absolute = PathMatch.Groups[1].Value.Replace('/', '\\');
-                    string Name = FFirefoxProfiles.MapPathToName(Absolute);
-                    if (!string.IsNullOrEmpty(Name)) { return Name; }
+                    int p = line.IndexOf('|');
+                    if (p > 0)
+                    {
+                        string name = line.Substring(0, p);
+                        string num = line.Substring(p + 1);
+                        long ticks;
+                        if (long.TryParse(num, out ticks)) focusTicks[name] = ticks;
+                    }
                 }
+                i++;
+            }
+        }
+        catch (Exception ex) { LogException("FFCommon", "LoadFocusState", ex); }
+    }
 
-                CurrentPid = Convert.ToInt32(ObjectRow["ParentProcessId"]);
+    public static void SaveFocusState(string lastFocusedProfile, Dictionary<string, long> focusTicks)
+    {
+        try
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("LastFocusedProfile=").Append(lastFocusedProfile == null ? string.Empty : lastFocusedProfile).AppendLine();
+            foreach (KeyValuePair<string, long> kv in focusTicks)
+                sb.Append(kv.Key).Append('|').Append(kv.Value).AppendLine();
+            File.WriteAllText(GetStateFile(), sb.ToString());
+        }
+        catch (Exception ex) { LogException("FFCommon", "SaveFocusState", ex); }
+    }
+
+    public static void UpdateFocusedProfile(string profileName)
+    {
+        if (string.IsNullOrEmpty(profileName)) return;
+        string last; Dictionary<string, long> map;
+        LoadFocusState(out last, out map);
+        map[profileName] = DateTime.UtcNow.Ticks;
+        SaveFocusState(profileName, map);
+        Log("FFFocusTracker", "Focused profile now: " + profileName);
+    }
+
+    // ---------- Process helpers ----------
+    public class FFProc { public int Pid; public string ProfileName; public DateTime StartTimeUtc; }
+
+    public static List<FFProc> GetRunningFirefoxProcesses()
+    {
+        List<FFProc> raw = new List<FFProc>();
+        try
+        {
+            Process[] procs = Process.GetProcesses();
+            int i = 0;
+            while (i < procs.Length)
+            {
+                Process p = procs[i];
+                try
+                {
+                    string n = p.ProcessName;
+                    bool isFF = string.Equals(n, "firefox", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(n, "firefox-bin", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(n, "firefox.exe", StringComparison.OrdinalIgnoreCase);
+                    if (isFF)
+                    {
+                        string prof = ResolveProfileNameForPid(p.Id); // <— parent-chain resolve
+                        DateTime st; try { st = p.StartTime.ToUniversalTime(); } catch { st = DateTime.MinValue; }
+                        FFProc f = new FFProc(); f.Pid = p.Id; f.ProfileName = prof; f.StartTimeUtc = st;
+                        raw.Add(f);
+                    }
+                }
+                catch { }
+                finally { try { p.Dispose(); } catch { } }
+                i++;
             }
 
-            if (CurrentPid == Pid) { break; }
-        }
-
-        return null;
-    }
-#endif
-
-#if LINUX
-    public static string ProfileNameFromPidLinux(int Pid)
-    {
-        string CommandLine = SafeRead("/proc/" + Pid.ToString() + "/cmdline");
-        if (string.IsNullOrEmpty(CommandLine)) { return null; }
-
-        CommandLine = CommandLine.Replace('\0', ' ');
-
-        Match ProfileMatch = Regex.Match(CommandLine, @"-P\s+""?([^\s""]+)""?");
-        if (ProfileMatch.Success) { return ProfileMatch.Groups[1].Value; }
-
-        Match PathMatch = Regex.Match(CommandLine, @"-profile\s+""?([^\s""]+)""?");
-        if (PathMatch.Success)
-        {
-            string Absolute = PathMatch.Groups[1].Value.Replace('/', Path.DirectorySeparatorChar);
-            return FFirefoxProfiles.MapPathToName(Absolute);
-        }
-        return null;
-    }
-
-    public static bool IsProfileRunningByProc(string ProfileName)
-    {
-        if (string.IsNullOrEmpty(ProfileName)) { return false; }
-
-        Process[] Processes = Process.GetProcesses();
-        foreach (Process Proc in Processes)
-        {
-            try
+            // keep most-recent-start per profile
+            Dictionary<string, FFProc> byProf = new Dictionary<string, FFProc>(StringComparer.OrdinalIgnoreCase);
+            int k = 0;
+            while (k < raw.Count)
             {
-                if (!Proc.ProcessName.StartsWith("firefox", StringComparison.OrdinalIgnoreCase)) { continue; }
-                string Name = ProfileNameFromPidLinux(Proc.Id);
-                if (!string.IsNullOrEmpty(Name) && Name.Equals(ProfileName, StringComparison.OrdinalIgnoreCase))
+                string key = string.IsNullOrEmpty(raw[k].ProfileName) ? "" : raw[k].ProfileName;
+                FFProc cur;
+                if (!byProf.TryGetValue(key, out cur) || raw[k].StartTimeUtc > cur.StartTimeUtc) byProf[key] = raw[k];
+                k++;
+            }
+            return new List<FFProc>(byProf.Values);
+        }
+        catch (Exception ex) { LogException("FFCommon", "GetRunningFirefoxProcesses", ex); return new List<FFProc>(); }
+    }
+
+    public static string NormalizePath(string p)
+    {
+        if (string.IsNullOrEmpty(p)) return p;
+        string r = p.Replace('\\', '/');
+        while (r.Length > 1 && r.EndsWith("/")) r = r.Substring(0, r.Length - 1);
+        return r;
+    }
+
+    public static string GetProcessCommandLine(int pid)
+    {
+        try
+        {
+#if WINDOWS
+            using (ManagementObjectSearcher s = new ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId = " + pid))
+            {
+                foreach (ManagementObject o in s.Get())
                 {
-                    return true;
+                    object cl = o["CommandLine"];
+                    if (cl != null) return cl.ToString();
                 }
             }
-            catch {}
+            return string.Empty;
+#else
+            string path = "/proc/" + pid + "/cmdline";
+            if (!File.Exists(path)) return string.Empty;
+            byte[] data = File.ReadAllBytes(path);
+            if (data == null || data.Length == 0) return string.Empty;
+            for (int i = 0; i < data.Length; i++) if (data[i] == 0) data[i] = (byte)' ';
+            return Encoding.UTF8.GetString(data);
+#endif
         }
-        return false;
+        catch { return string.Empty; }
     }
 
-    private static string SafeRead(string AbsolutePath)
+    public static string ExtractProfileFromCmd(string cmd)
     {
-        try { return File.ReadAllText(AbsolutePath); } catch { return null; }
+        if (string.IsNullOrEmpty(cmd)) return string.Empty;
+        try { Match m = new Regex("-P\\s+\"?([^\"\\s]+)\"?", RegexOptions.IgnoreCase).Match(cmd); if (m.Success) return m.Groups[1].Value; }
+        catch { }
+        return string.Empty;
     }
+
+    public static string ExtractProfilePathFromCmd(string cmd)
+    {
+        if (string.IsNullOrEmpty(cmd)) return string.Empty;
+        try { Match m = new Regex("-profile\\s+\"?([^\"]+)\"?", RegexOptions.IgnoreCase).Match(cmd); if (m.Success) return m.Groups[1].Value; }
+        catch { }
+        return string.Empty;
+    }
+
+    // --- Robust profile resolution: walk parent chain until we find the launcher with -P / -profile ---
+    public static string ResolveProfileNameForPid(int pid)
+    {
+        try
+        {
+            List<ProfileInfo> infos = ReadProfilesIni();
+            Dictionary<string, string> pathToName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            int i = 0; while (i < infos.Count) { if (!string.IsNullOrEmpty(infos[i].PathOnDisk) && !string.IsNullOrEmpty(infos[i].Name)) pathToName[NormalizePath(infos[i].PathOnDisk)] = infos[i].Name; i++; }
+
+            int cur = pid; int guard = 0;
+            while (cur > 0 && guard < 50)
+            {
+                string cl = GetProcessCommandLine(cur);
+                string prof = ExtractProfileFromCmd(cl);
+                if (!string.IsNullOrEmpty(prof)) return prof;
+
+                string ppath = ExtractProfilePathFromCmd(cl);
+                if (!string.IsNullOrEmpty(ppath))
+                {
+                    string np = NormalizePath(ppath);
+                    string mapped;
+                    if (pathToName.TryGetValue(np, out mapped) && !string.IsNullOrEmpty(mapped)) return mapped;
+                }
+
+                int parent = GetParentPid(cur);
+                if (parent <= 0 || parent == cur) break;
+                cur = parent; guard++;
+            }
+        }
+        catch (Exception ex) { LogException("FFCommon", "ResolveProfileNameForPid", ex); }
+        return string.Empty;
+    }
+
+    public static int GetParentPid(int pid)
+    {
+        try
+        {
+#if WINDOWS
+            using (ManagementObjectSearcher s = new ManagementObjectSearcher("SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = " + pid))
+            {
+                foreach (ManagementObject o in s.Get())
+                {
+                    object pp = o["ParentProcessId"];
+                    if (pp != null) return Convert.ToInt32((uint)pp);
+                }
+            }
+            return 0;
+#else
+            string path = "/proc/" + pid + "/status";
+            if (!File.Exists(path)) return 0;
+            string[] lines = File.ReadAllLines(path);
+            int i = 0; while (i < lines.Length) { if (lines[i].StartsWith("PPid:")) { int n; if (int.TryParse(lines[i].Substring(5).Trim(), out n)) return n; } i++; }
+            return 0;
 #endif
+        }
+        catch { return 0; }
+    }
+
+    // ---------- Launch ----------
+    public static bool TryStart(string file, string args)
+    {
+        try
+	{
+		ProcessStartInfo psi = new ProcessStartInfo();
+		psi.FileName = file;
+		psi.Arguments = args;
+		psi.UseShellExecute = false;
+		psi.CreateNoWindow = true;
+		return Process.Start(psi) != null;
+	}
+        catch { return false; }
+    }
+
+    public static string FindFirefoxExecutable()
+    {
+#if WINDOWS
+        try
+        {
+            ProcessStartInfo psi = new ProcessStartInfo(); psi.FileName = "where"; psi.Arguments = "firefox"; psi.UseShellExecute = false; psi.RedirectStandardOutput = true; psi.CreateNoWindow = true;
+            using (Process p = Process.Start(psi))
+            {
+                string outp = p.StandardOutput.ReadToEnd(); p.WaitForExit(1500);
+                if (!string.IsNullOrEmpty(outp))
+                {
+                    string[] lines = outp.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (lines.Length > 0 && File.Exists(lines[0])) return lines[0];
+                }
+            }
+        } catch { }
+        string pf = Environment.GetEnvironmentVariable("ProgramFiles"); if (!string.IsNullOrEmpty(pf)) { string p1 = Path.Combine(pf, "Mozilla Firefox", "firefox.exe"); if (File.Exists(p1)) return p1; }
+        string pf86 = Environment.GetEnvironmentVariable("ProgramFiles(x86)"); if (!string.IsNullOrEmpty(pf86)) { string p2 = Path.Combine(pf86, "Mozilla Firefox", "firefox.exe"); if (File.Exists(p2)) return p2; }
+        return "firefox";
+#else
+        return "firefox";
+#endif
+    }
+
+    public static bool LaunchFirefox(string profileName, string url)
+    {
+        try
+        {
+            string ff = FindFirefoxExecutable();
+            StringBuilder args = new StringBuilder();
+            if (!string.IsNullOrEmpty(profileName))
+		    args.Append(" -P \"").Append(profileName).Append("\"");
+            if (!string.IsNullOrEmpty(url))
+		    args.Append(" -new-tab \"").Append(url).Append("\"");
+
+            ProcessStartInfo psi = new ProcessStartInfo();
+	    psi.FileName = ff;
+	    psi.Arguments = args.ToString();
+	    psi.UseShellExecute = false;
+	    psi.CreateNoWindow = true;
+
+            Process p = Process.Start(psi);
+            Log("FFLinkRouter", "Launch firefox: profile='" + profileName + "' url='" + url + "' exe='" + ff + "'");
+            return p != null;
+        }
+        catch (Exception ex) { LogException("FFLinkRouter", "LaunchFirefox", ex); return false; }
+    }
 }
