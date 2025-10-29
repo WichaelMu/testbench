@@ -421,6 +421,13 @@ class MCrypt
 
 					Iterator += 1;
 					break;
+
+				case  "__HELP__":
+				case "?":
+				case "--help":
+					Upsert (ref UserProvidedConfiguration, "Help", new GlobalConfigurationSettings (true));
+					return UserProvidedConfiguration;
+
 			}
 		}
 
@@ -464,6 +471,9 @@ class MCrypt
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static bool VerifyCommandLineArguments (Dictionary<string, GlobalConfigurationSettings> Check)
 	{
+		if (Check.ContainsKey ("Help"))
+			return false;
+
 		EValidation Validation = EValidation.None;
 		if (!Check.ContainsKey ("Mode"))
 			Validation |= EValidation.Mode;
@@ -520,7 +530,8 @@ enum EValidation : int
 	None = 0,
 	Mode = 1,
 	Inbound = 2,
-	Key = 4
+	Key = 4,
+	HelpRequested = 8
 }
 
 enum ECryptMode
