@@ -7,111 +7,160 @@ using System.Threading;
 public class FFFocusTracker
 {
 #if WINDOWS
-    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    [DllImport ("user32.dll")] private static extern IntPtr GetForegroundWindow ();
+    [DllImport ("user32.dll")] private static extern uint GetWindowThreadProcessId (IntPtr hWnd, out uint lpdwProcessId);
 #endif
 
-    [STAThread]
-    public static void Main(string[] args)
-    {
-        FFCommon.Log("FFFocusTracker", "Starting focus tracker...");
-        try { RunLoop(); }
-        catch (Exception ex)
-        {
-            FFCommon.LogException("FFFocusTracker", "Main", ex);
-            FFCommon.NotifyError("FF Focus Tracker crashed", ex.Message);
-            FFCommon.OpenLogsFolderFailSafe();
-        }
-	finally
+	[STAThread]
+	public static void Main (string[] args)
 	{
-		// Log an empty line on every Link Route.
-		FFCommon.LogEmpty ("FFFocusTracker");
+		FFCommon.Log ("FFFocusTracker", "Starting focus tracker...");
+		try { RunLoop (); }
+		catch (Exception ex)
+		{
+			FFCommon.LogException ("FFFocusTracker", "Main", ex);
+			FFCommon.NotifyError ("FF Focus Tracker crashed", ex.Message);
+			FFCommon.OpenLogsFolderFailSafe ();
+		}
+		finally
+		{
+			// Log an empty line on every Link Route.
+			FFCommon.LogEmpty ("FFFocusTracker");
+		}
 	}
-    }
 
-    private static void RunLoop()
-    {
-        string lastSent = string.Empty;
-        while (true)
-        {
-            try
-            {
-                string prof = DetectActiveFirefoxProfile();
-                if (!string.IsNullOrEmpty(prof) && !string.Equals(prof, lastSent, StringComparison.OrdinalIgnoreCase))
-                {
-                    FFCommon.UpdateFocusedProfile(prof);
-                    lastSent = prof;
-                }
-            }
-            catch (Exception ex) { FFCommon.LogException("FFFocusTracker", "RunLoopDetect", ex); }
-            Thread.Sleep(400);
-        }
-    }
+	private static void RunLoop ()
+	{
+		string LastSent = string.Empty;
+		while (true)
+		{
+			try
+			{
+				string ActiveProfile = DetectActiveFirefoxProfile ();
+				if (!string.IsNullOrEmpty (ActiveProfile) && !string.Equals (ActiveProfile, LastSent, StringComparison.OrdinalIgnoreCase))
+				{
+					FFCommon.UpdateFocusedProfile (ActiveProfile);
+					LastSent = ActiveProfile;
+				}
+			}
+			catch (Exception ex) { FFCommon.LogException ("FFFocusTracker", "RunLoopDetect", ex); }
+			Thread.Sleep (400);
+		}
+	}
 
-    private static string DetectActiveFirefoxProfile()
-    {
+	private static string DetectActiveFirefoxProfile ()
+	{
 #if WINDOWS
-        IntPtr h = GetForegroundWindow();
-        if (h == IntPtr.Zero) return string.Empty;
-        uint pid; GetWindowThreadProcessId(h, out pid);
-        try
-        {
-            Process p = Process.GetProcessById((int)pid);
-            try
-            {
-                string n = p.ProcessName;
-                bool isFF = string.Equals(n, "firefox", StringComparison.OrdinalIgnoreCase) || string.Equals(n, "firefox.exe", StringComparison.OrdinalIgnoreCase);
-                if (!isFF) return string.Empty;
-                // Robust: resolve via parent chain so we always get the owning profile
-                return FFCommon.ResolveProfileNameForPid((int)pid);
-            }
-            finally { try { p.Dispose(); } catch { } }
-        }
-        catch { return string.Empty; }
+		IntPtr HwndActiveWindow = GetForegroundWindow ();
+		if (HwndActiveWindow == IntPtr.Zero)
+			return string.Empty;
+		uint ProcessId;
+		GetWindowThreadProcessId (HwndActiveWindow, out ProcessId);
+		try
+		{
+			Process Process = Process.GetProcessById ((int)ProcessId);
+			try
+			{
+				string ProcessName = Process.ProcessName;
+				bool bIsFirefox = string.Equals (ProcessName, "firefox", StringComparison.OrdinalIgnoreCase) || string.Equals (ProcessName, "firefox.exe", StringComparison.OrdinalIgnoreCase);
+				if (!bIsFirefox)
+					return string.Empty;
+				// Robust: resolve via parent chain so we always get the owning profile
+				return FFCommon.ResolveProfileNameForPid ((int)ProcessId);
+			}
+			finally
+			{
+				try
+				{
+					Process.Dispose ();
+				}
+				catch { }
+			}
+		}
+		catch
+		{
+			return string.Empty;
+		}
 #else
-        // X11: xdotool path (Wayland may restrict)
-        try
-        {
-            string pidStr = ExecAndRead("xdotool", "getactivewindow getwindowpid");
-            int n;
-            if (!string.IsNullOrEmpty(pidStr) && int.TryParse(pidStr.Trim(), out n))
-            {
-                Process pr = null; try { pr = Process.GetProcessById(n); } catch { pr = null; }
-                if (pr != null)
-                {
-                    string name = pr.ProcessName;
-                    bool isFF = string.Equals(name, "firefox", StringComparison.OrdinalIgnoreCase) || string.Equals(name, "firefox-bin", StringComparison.OrdinalIgnoreCase);
-                    try { pr.Dispose(); } catch { }
-                    if (!isFF) return string.Empty;
-                }
-                return FFCommon.ResolveProfileNameForPid(n);
-            }
-        } catch { }
+		// X11: xdotool path (Wayland may restrict)
+		try
+		{
+			string ProcessIdString = ExecAndRead ("xdotool", "getactivewindow getwindowpid");
+			int ProcessId;
+			if (!string.IsNullOrEmpty (ProcessIdString) && int.TryParse (ProcessIdString.Trim (), out ProcessId))
+			{
+				Process Process = null;
+				try
+				{
+					Process = Process.GetProcessById (ProcessId);
+				}
+				catch
+				{
+					Process = null;
+				}
 
-        // xprop fallback
-        try
-        {
-            string wid = ExecAndRead("sh", "-c \"xprop -root _NET_ACTIVE_WINDOW | awk -F '# ' '{print $2}'\"");
-            if (!string.IsNullOrEmpty(wid))
-            {
-                string pid = ExecAndRead("sh", "-c \"xprop -id " + wid.Trim() + " _NET_WM_PID | awk '{print $3}'\"");
-                int n; if (int.TryParse(pid.Trim(), out n)) return FFCommon.ResolveProfileNameForPid(n);
-            }
-        } catch { }
+				if (Process != null)
+				{
+					string ProcessName = Process.ProcessName;
+					bool bIsFirefox = string.Equals (ProcessName, "firefox", StringComparison.OrdinalIgnoreCase) || string.Equals (ProcessName, "firefox-bin", StringComparison.OrdinalIgnoreCase);
+					try
+					{
+						Process.Dispose ();
+					}
+					catch { }
 
-        return string.Empty;
+					if (!bIsFirefox)
+						return string.Empty;
+				}
+
+				return FFCommon.ResolveProfileNameForPid (ProcessId);
+			}
+		}
+		catch { }
+
+		// xprop fallback
+		try
+		{
+			string WindowId = ExecAndRead ("sh", "-c \"xprop -root _NET_ACTIVE_WINDOW | awk -F '# ' '{print $2}'\"");
+			if (!string.IsNullOrEmpty (WindowId))
+			{
+				string ProcessId = ExecAndRead ("sh", "-c \"xprop -id " + WindowId.Trim () + " _NET_WM_PID | awk '{print $3}'\"");
+
+				int n;
+				if (int.TryParse (ProcessId.Trim (), out n))
+					return FFCommon.ResolveProfileNameForPid (n);
+			}
+		}
+		catch { }
+
+		return string.Empty;
 #endif
-    }
+	}
 
 #if !WINDOWS
-    private static string ExecAndRead(string file, string args)
-    {
-        try
-        {
-            ProcessStartInfo psi = new ProcessStartInfo(); psi.FileName = file; psi.Arguments = args;
-            psi.UseShellExecute = false; psi.RedirectStandardOutput = true; psi.RedirectStandardError = true; psi.CreateNoWindow = true;
-            using (Process p = Process.Start(psi)) { string s = p.StandardOutput.ReadToEnd(); p.WaitForExit(800); return s.Trim(); }
-        } catch { return string.Empty; }
-    }
+	private static string ExecAndRead (string File, string Args)
+	{
+		try
+		{
+			ProcessStartInfo ProcessInfo = new ProcessStartInfo ();
+			ProcessInfo.FileName = File;
+			ProcessInfo.Arguments = Args;
+			ProcessInfo.UseShellExecute = false;
+			ProcessInfo.RedirectStandardOutput = true;
+			ProcessInfo.RedirectStandardError = true;
+			ProcessInfo.CreateNoWindow = true;
+
+			using (Process RunningProcess = Process.Start (ProcessInfo))
+			{
+				string s = RunningProcess.StandardOutput.ReadToEnd ();
+				RunningProcess.WaitForExit (800);
+				return s.Trim ();
+			}
+		}
+		catch
+		{
+			return string.Empty;
+		}
+	}
 #endif
 }
