@@ -15,6 +15,7 @@ public class FFFocusTracker
 	public static void Main (string[] args)
 	{
 		FFCommon.Log ("FFFocusTracker", "Starting focus tracker...");
+
 		try { RunLoop (); }
 		catch (Exception ex)
 		{
