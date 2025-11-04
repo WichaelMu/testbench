@@ -84,8 +84,8 @@ if errorlevel 1 goto :build_fail
 
 echo [3/3] Ensuring log/state directories ...
 set "LOCALFF=%LOCALAPPDATA%\FF"
-if not exist "%LOCALFF%\logs"  md "%LOCALFF%\logs"  2>nul
-if not exist "%LOCALFF%\state" md "%LOCALFF%\state" 2>nul
+if not exist "%LOCALFF%\"  md "%LOCALFF%\"  2>nul
+if not exist "%LOCALFF%\" md "%LOCALFF%\" 2>nul
 
 popd >nul
 
@@ -139,7 +139,7 @@ start "" ms-settings:defaultapps?filters=protocol&value=https
 echo(
 echo Done.
 echo Test:  start "" "https://example.com"
-echo Logs:  %LOCALAPPDATA%\FF\logs
+echo Logs:  %LOCALAPPDATA%\FF\
 exit /b 0
 
 :build_fail

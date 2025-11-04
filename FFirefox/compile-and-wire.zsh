@@ -157,7 +157,7 @@ userctl () {
 }
 
 # Ensure log dirs exist for the first run
-mkdir -p "$THOME/.local/share/FF/logs" "$THOME/.local/share/FF/state"
+mkdir -p "$THOME/.local/share/FF/"
 
 # Reload + enable + (re)start
 userctl daemon-reload || true
@@ -169,4 +169,4 @@ else
 fi
 
 echo "Done. Service: $SERVICE  |  Binaries: $DEST"
-echo "Logs: $THOME/.local/share/FF/logs"
+echo "Logs: $THOME/.local/share/FF/"
