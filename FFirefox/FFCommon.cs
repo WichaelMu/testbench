@@ -142,7 +142,9 @@ public static string GetBaseDir ()
 			using (NotifyIcon Notification = new NotifyIcon ())
 			{
 				Notification.Visible = true;
+#if !FW_WINDOWS
 				Notification.Icon = SystemIcons.Information;
+#endif
 				Notification.BalloonTipTitle = Title;
 				Notification.BalloonTipText = Body;
 				Notification.ShowBalloonTip (3000);

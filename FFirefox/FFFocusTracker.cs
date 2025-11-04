@@ -339,4 +339,49 @@ public class FFFocusTracker
         return sb.ToString();
     }
 #endif
+
+#if FW_WINDOWS
+	// Map a process id to a Firefox profile name by inspecting its command line.
+	// Works on both Windows and Linux.
+	private static string ProfileFromPid(int pid)
+	{
+	    try
+	    {
+		System.Diagnostics.Process p = null;
+		try { p = System.Diagnostics.Process.GetProcessById(pid); } catch { p = null; }
+		if (p == null) return string.Empty;
+
+		string name = p.ProcessName;
+		bool isFF = string.Equals(name, "firefox", StringComparison.OrdinalIgnoreCase)
+			    || string.Equals(name, "firefox-bin", StringComparison.OrdinalIgnoreCase)
+			    || string.Equals(name, "firefox.exe", StringComparison.OrdinalIgnoreCase);
+		try { p.Dispose(); } catch { }
+		if (!isFF) return string.Empty;
+
+		// Pull the full command line and extract "-P <name>" first,
+		// then try "-profile <path>" mapped via profiles.ini as a fallback.
+		string cmd = FFCommon.GetProcessCommandLine(pid);
+		if (string.IsNullOrEmpty(cmd)) return string.Empty;
+
+		string prof = FFCommon.ExtractProfileFromCmd(cmd);
+		if (!string.IsNullOrEmpty(prof)) return prof;
+
+		string ppath = FFCommon.ExtractProfilePathFromCmd(cmd);
+		if (!string.IsNullOrEmpty(ppath))
+		{
+		    System.Collections.Generic.List<FFCommon.ProfileInfo> infos = FFCommon.ReadProfilesIni();
+		    string np = FFCommon.NormalisePath(ppath);
+		    int i = 0;
+		    while (i < infos.Count)
+		    {
+			if (FFCommon.NormalisePath(infos[i].PathOnDisk) == np)
+			    return infos[i].Name;
+			i++;
+		    }
+		}
+	    }
+	    catch { }
+	    return string.Empty;
+	}
+#endif
 }

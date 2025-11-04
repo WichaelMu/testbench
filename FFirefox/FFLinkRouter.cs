@@ -18,7 +18,7 @@ public class FFLinkRouter
 			if (ShouldDefaultFirefox ())
 			{
 				string DefaultProfile = FFCommon.GetDefaultProfileName ();
-				FFCommon.Log ("FFLinkRouter", $"FF_DEFAULT_FIREFOX set. Defaulting: {Url}");
+				FFCommon.Log ("FFLinkRouter", "FF_DEFAULT_FIREFOX set. Defaulting: " + Url);
 				FFCommon.LaunchFirefox (DefaultProfile, Url);
 				return;
 			}
