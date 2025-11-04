@@ -128,7 +128,7 @@ public class FFFocusTracker
             DateTime now = DateTime.UtcNow;
             if ((now - _lastGnomeFalseLogUtc).TotalSeconds > 10.0)
             {
-                FFCommon.Log("FFFocusTracker", "GNOME Shell Eval exists but returned false (Eval disabled by shell).");
+                // FFCommon.Log("FFFocusTracker", "GNOME Shell Eval exists but returned false (Eval disabled by shell).");
                 _lastGnomeFalseLogUtc = now;
             }
             return string.Empty;
@@ -211,7 +211,7 @@ public class FFFocusTracker
                 {
                     if (string.Equals(running[i].ProfileName, lastFocused, StringComparison.OrdinalIgnoreCase))
                     {
-                        FFCommon.Log("FFFocusTracker", "FallbackGuessFromRunning: re-affirming last-focused from state -> " + lastFocused);
+                        // FFCommon.Log("FFFocusTracker", "FallbackGuessFromRunning: re-affirming last-focused from state -> " + lastFocused);
                         return lastFocused;
                     }
                     i++;
