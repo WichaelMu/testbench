@@ -62,7 +62,7 @@ public class FFFocusTracker
                     DateTime now = DateTime.UtcNow;
                     if ((now - _lastNoWindowLogUtc).TotalSeconds > 15.0)
                     {
-                        FFCommon.Log("FFFocusTracker", "No active Firefox window detected (Wayland blocked, missing xdotool/xprop, or non-Firefox focused).");
+                        // FFCommon.Log("FFFocusTracker", "No active Firefox window detected (Wayland blocked, missing xdotool/xprop, or non-Firefox focused).");
                         _lastNoWindowLogUtc = now;
                     }
                 }
@@ -339,4 +339,151 @@ public class FFFocusTracker
         return sb.ToString();
     }
 #endif
+
+#if FW_WINDOWS
+    // Map a process id to a Firefox profile name by inspecting its command line.
+    // Works on both Windows and Linux.
+    static string ProfileFromPid(int pid)
+    {
+        try
+        {
+            System.Diagnostics.Process p = null;
+            try { p = System.Diagnostics.Process.GetProcessById(pid); } catch { p = null; }
+            if (p == null) return string.Empty;
+
+            string name = p.ProcessName;
+            bool isFF = string.Equals(name, "firefox", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(name, "firefox-bin", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(name, "firefox.exe", StringComparison.OrdinalIgnoreCase);
+
+            try { p.Dispose(); } catch { }
+            if (!isFF) return string.Empty;
+
+            // Pull the full command line and extract "-P <name>" first,
+            // // then try "-profile <path>" mapped via profiles.ini as a fallback.
+            // string cmd = FFCommon.GetProcessCommandLine(pid);
+            // if (string.IsNullOrEmpty(cmd)) return string.Empty;
+
+            string prof = FFCommon.ExtractProfileFromCmd(cmd);
+            if (!string.IsNullOrEmpty(prof)) return prof;
+
+            string ppath = FFCommon.ExtractProfilePathFromCmd(cmd);
+            if (!string.IsNullOrEmpty(ppath))
+            {
+                System.Collections.Generic.List<FFCommon.ProfileInfo> infos = FFCommon.ReadProfilesIni();
+
+                string np = FFCommon.NormalisePath(ppath);
+                int i = 0;
+
+                while (i < infos.Count)
+                {
+                    if (FFCommon.NormalisePath(infos[i].PathOnDisk) == np)
+                        return infos[i].Name;
+                    i++;
+                }
+            }
+        }
+        catch { }
+
+        return string.Empty;
+    }
+#endif
+
+    // --- graceful shutdown hooks (cross-platform) ---
+    static volatile bool _shutdownLogged = false;
+    static string _shutdownReason = string.Empty;
+
+    static void RegisterShutdownHooks()
+    {
+        try
+        {
+            AppDomain.CurrentDomain.ApplicationExit += OnApplicationExit;
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+            AppDomain.CurrentDomain.DomainUnload += OnDomainUnload;
+            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+            try { Console.CancelKeyPress += OnCancelKeyPress; } catch { }
+    #if WINDOWS
+            try { Microsoft.Win32.SystemEvents.SessionEnding += OnSessionEnding; } catch { }
+    #endif
+        }
+        catch { }
+    }
+
+    static void OnApplicationExit (object sender, EventArgs e)
+    {
+        LogShutdown("FFFocusTracker is Shutting Down...");
+    }
+
+    static void OnProcessExit(object sender, EventArgs e)
+    {
+        LogShutdown("ProcessExit");
+    }
+
+    static void OnDomainUnload(object sender, EventArgs e)
+    {
+        LogShutdown("DomainUnload");
+    }
+
+    static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        try
+        {
+            if (e != null && e.ExceptionObject != null)
+            {
+                string msg = e.ExceptionObject.ToString();
+                if (string.IsNullOrEmpty(_shutdownReason))
+                    _shutdownReason = "UnhandledException: " + msg;
+                else
+                    _shutdownReason = _shutdownReason + " | UnhandledException: " + msg;
+
+                FFCommon.Log("FFFocusTracker", "Unhandled exception observed: " + msg);
+            }
+        }
+        catch { }
+        LogShutdown(null);
+    }
+
+    static void OnCancelKeyPress(object sender, ConsoleCancelEventArgs e)
+    {
+        try
+        {
+            string rk = (e == null) ? "" : e.SpecialKey.ToString();
+            if (string.IsNullOrEmpty(_shutdownReason))
+                _shutdownReason = "ConsoleCancel: " + rk;
+            else
+                _shutdownReason = _shutdownReason + " | ConsoleCancel: " + rk;
+        }
+        catch { }
+        // allow normal termination
+    }
+
+    #if WINDOWS
+    static void OnSessionEnding(object sender, Microsoft.Win32.SessionEndingEventArgs e)
+    {
+        try
+        {
+            string why = (e == null) ? "" : e.Reason.ToString();
+            if (string.IsNullOrEmpty(_shutdownReason))
+                _shutdownReason = "SessionEnding: " + why;
+            else
+                _shutdownReason = _shutdownReason + " | SessionEnding: " + why;
+        }
+        catch { }
+    }
+    #endif
+
+    static void LogShutdown(string signal)
+    {
+        if (_shutdownLogged) return;
+        _shutdownLogged = true;
+
+        string reason = _shutdownReason;
+        if (!string.IsNullOrEmpty(signal))
+            reason = string.IsNullOrEmpty(reason) ? signal : (signal + " | " + reason);
+
+        if (!string.IsNullOrEmpty(reason))
+            FFCommon.Log("FFFocusTracker", "FFFocusTracker is shutting down. Reason: " + reason);
+        else
+            FFCommon.Log("FFFocusTracker", "FFFocusTracker is shutting down.");
+    }
 }
