@@ -20,39 +20,31 @@ SERVICE="FFFocus-Tracker.service"
 mkdir -p "$UNIT_DIR"
 
 # --- Ensure binfmt 'cli' (no-extension CIL) ---
-ensure_binfmt_cli() {
-  if ! command -v update-binfmts >/dev/null 2>&1; then
-    echo "update-binfmts not found; skipping binfmt setup (system may rely on systemd-binfmt only)."
-    return 0
+ensure_cli_binfmt() {
+  local NAME=cli MONO=${MONO_PATH:-/usr/bin/mono} PKG=local-ff
+  # ready
+  if [[ ! -x "$MONO" ]]; then echo "mono not at $MONO; sudo apt install mono-runtime"; return 1; fi
+  sudo modprobe binfmt_misc || true
+  sudo mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc 2>/dev/null || true
+  # clean
+  if command -v update-binfmts >/dev/null 2>&1; then
+    sudo update-binfmts --disable "$NAME" 2>/dev/null || true
+    sudo update-binfmts --remove  "$NAME" 2>/dev/null || true
   fi
-
-  # Fast path: try enabling existing rule first
-  if update-binfmts --display cli 2>/dev/null | grep -q 'status.*enabled'; then
-    echo "binfmt 'cli' already enabled."
-    return 0
+  [[ -e /proc/sys/fs/binfmt_misc/$NAME ]] && echo -1 | sudo tee /proc/sys/fs/binfmt_misc/$NAME >/dev/null || true
+  # install fresh
+  if command -v update-binfmts >/dev/null 2>&1; then
+    sudo update-binfmts --install "$NAME" "$MONO" --package "$PKG" --magic 'MZ' --offset 0
+  else
+    echo ":$NAME:M::MZ::$MONO:" | sudo tee /proc/sys/fs/binfmt_misc/register >/dev/null
   fi
-  echo "Attempting to enable existing binfmt 'cli'…"
-  if sudo update-binfmts --enable cli 2>/dev/null; then
-    echo "Enabled existing binfmt 'cli'."
-    return 0
-  fi
-
-  # Install path (rule missing)
-  echo "Installing binfmt 'cli' mapping for Mono…"
-  sudo modprobe binfmt_misc 2>/dev/null || true
-  sudo mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc 2>/dev/null || true
-
-  MONO_PATH="$(command -v mono || true)"
-  [[ -n "$MONO_PATH" ]] || { echo "mono not found. Install mono-runtime / mono-devel."; exit 1; }
-
-  sudo update-binfmts --install cli "$MONO_PATH" --package mono-runtime --magic 'MZ' --offset 0 || true
-  sudo update-binfmts --enable cli || true
-  sudo systemctl restart binfmt-support 2>/dev/null || sudo systemctl restart systemd-binfmt 2>/dev/null || true
-
-  echo "binfmt 'cli' status:"
-  update-binfmts --display cli 2>/dev/null || true
+  # persist & reload
+  echo ":$NAME:M::MZ::$MONO:" | sudo tee /etc/binfmt.d/99-mono-$NAME.conf >/dev/null
+  sudo systemctl restart systemd-binfmt 2>/dev/null || sudo systemctl restart binfmt-support 2>/dev/null || true
 }
-ensure_binfmt_cli
+
+# call it early:
+ensure_cli_binfmt || exit 1
 
 # --- Compiler pick ---
 have_csc=false; have_mcs=false
@@ -165,7 +157,7 @@ userctl () {
 }
 
 # Ensure log dirs exist for the first run
-mkdir -p "$THOME/.local/share/FF/logs" "$THOME/.local/share/FF/state"
+mkdir -p "$THOME/.local/share/FF/"
 
 # Reload + enable + (re)start
 userctl daemon-reload || true
@@ -177,4 +169,4 @@ else
 fi
 
 echo "Done. Service: $SERVICE  |  Binaries: $DEST"
-echo "Logs: $THOME/.local/share/FF/logs"
+echo "Logs: $THOME/.local/share/FF/"

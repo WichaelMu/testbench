@@ -142,7 +142,9 @@ public static string GetBaseDir ()
 			using (NotifyIcon Notification = new NotifyIcon ())
 			{
 				Notification.Visible = true;
+#if !FW_WINDOWS
 				Notification.Icon = SystemIcons.Information;
+#endif
 				Notification.BalloonTipTitle = Title;
 				Notification.BalloonTipText = Body;
 				Notification.ShowBalloonTip (3000);
@@ -338,7 +340,7 @@ public static string GetBaseDir ()
         map[profileName] = ticks;
         last = profileName;
         SaveFocusState(last, map);
-        Log("FFFocusTracker", "Focused profile now: " + profileName);
+        Log("FFFocusTracker", $"Focused profile now: {profileName}");
     }
 
     // ----------------------

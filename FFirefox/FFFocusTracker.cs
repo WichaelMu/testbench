@@ -1,6 +1,3 @@
-// =============================
-// File: FFFocusTracker.cs
-// =============================
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -8,26 +5,44 @@ using System.Threading;
 using System.IO;
 using System.Collections.Generic;
 
+
 public class FFFocusTracker
 {
 #if WINDOWS
     [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
+    static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 #endif
 
-    // So we don't spam the log
-    private static DateTime _lastNoWindowLogUtc = DateTime.MinValue;
-    private static DateTime _lastGnomeFalseLogUtc = DateTime.MinValue;
+#if !WINDOWS
+    [System.Runtime.InteropServices.DllImport("libc")]
+    static extern System.IntPtr signal(int signum, SigHandler handler);
+
+    delegate void SigHandler(int signum);
+
+    static readonly SigHandler _unixSigHandler = OnUnixSignal;
+
+    const int SIGINT  = 2;
+    const int SIGHUP  = 1;
+    const int SIGQUIT = 3;
+    const int SIGTERM = 15;
+#endif
+
+
+    static DateTime LastNoWindowLogUTC = DateTime.MinValue;
+    static DateTime LastGNOMEFalseLogUTC = DateTime.MinValue;
 
     public static void Main(string[] args)
     {
         string disp = Environment.GetEnvironmentVariable("DISPLAY");
         string wdisp = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
         string sess = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE");
-        FFCommon.Log("FFFocusTracker", "Starting focus tracker... DISPLAY=" + (disp ?? "<null>") + " WAYLAND_DISPLAY=" + (wdisp ?? "<null>") + " XDG_SESSION_TYPE=" + (sess ?? "<null>"));
+	int pid = System.Diagnostics.Process.GetCurrentProcess ().Id;
+        FFCommon.Log("FFFocusTracker", "Starting focus tracker (PID=" + pid + "... DISPLAY=" + (disp ?? "<null>") + " WAYLAND_DISPLAY=" + (wdisp ?? "<null>") + " XDG_SESSION_TYPE=" + (sess ?? "<null>"));
+        RegisterShutdownHooks ();
+
         try
         {
             RunLoop();
@@ -40,7 +55,7 @@ public class FFFocusTracker
         }
     }
 
-    private static void RunLoop()
+    static void RunLoop()
     {
         string lastSentProfile = string.Empty;
 
@@ -60,10 +75,10 @@ public class FFFocusTracker
                 else
                 {
                     DateTime now = DateTime.UtcNow;
-                    if ((now - _lastNoWindowLogUtc).TotalSeconds > 15.0)
+                    if ((now - LastNoWindowLogUTC).TotalSeconds > 15.0)
                     {
                         // FFCommon.Log("FFFocusTracker", "No active Firefox window detected (Wayland blocked, missing xdotool/xprop, or non-Firefox focused).");
-                        _lastNoWindowLogUtc = now;
+                        LastNoWindowLogUTC = now;
                     }
                 }
             }
@@ -76,7 +91,7 @@ public class FFFocusTracker
         }
     }
 
-    private static string DetectActiveFirefoxProfile()
+    static string DetectActiveFirefoxProfile()
     {
 #if WINDOWS
         IntPtr h = GetForegroundWindow();
@@ -111,7 +126,7 @@ public class FFFocusTracker
     }
 
 #if !WINDOWS
-    private static string TryGnomeShellPid()
+    static string TryGnomeShellPid()
     {
         string gdbus = FindOnPath("gdbus");
         if (string.IsNullOrEmpty(gdbus))
@@ -126,10 +141,10 @@ public class FFFocusTracker
         if (outp.StartsWith("(false", StringComparison.OrdinalIgnoreCase))
         {
             DateTime now = DateTime.UtcNow;
-            if ((now - _lastGnomeFalseLogUtc).TotalSeconds > 10.0)
+            if ((now - LastGNOMEFalseLogUTC).TotalSeconds > 10.0)
             {
                 // FFCommon.Log("FFFocusTracker", "GNOME Shell Eval exists but returned false (Eval disabled by shell).");
-                _lastGnomeFalseLogUtc = now;
+                LastGNOMEFalseLogUTC = now;
             }
             return string.Empty;
         }
@@ -142,7 +157,7 @@ public class FFFocusTracker
         return ProfileFromPid(pid);
     }
 
-    private static string TryXdotool()
+    static string TryXdotool()
     {
         string xdotool = FindOnPath("xdotool");
         if (string.IsNullOrEmpty(xdotool))
@@ -162,7 +177,7 @@ public class FFFocusTracker
         return ProfileFromPid(pid);
     }
 
-    private static string TryXprop()
+    static string TryXprop()
     {
         string sh = FindOnPath("sh");
         if (string.IsNullOrEmpty(sh))
@@ -184,7 +199,7 @@ public class FFFocusTracker
     }
 
     // --- NEW: If we can’t see focus at all, guess from running firefoxes.
-    private static string FallbackGuessFromRunning()
+    static string FallbackGuessFromRunning()
     {
         try
         {
@@ -251,7 +266,7 @@ public class FFFocusTracker
         }
     }
 
-    private static string ProfileFromPid(int pid)
+    static string ProfileFromPid(int pid)
     {
         try
         {
@@ -261,7 +276,7 @@ public class FFFocusTracker
 
             string name = p.ProcessName;
             bool isFF = string.Equals(name, "firefox", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(name, "firefox-bin", StringComparison.OrdinalIgnoreCase);
+                     || string.Equals(name, "firefox-bin", StringComparison.OrdinalIgnoreCase);
             try { p.Dispose(); } catch { }
             if (!isFF) return string.Empty;
 
@@ -289,7 +304,7 @@ public class FFFocusTracker
         return string.Empty;
     }
 
-    private static string ExecAndRead(string file, string args, int timeoutMs)
+    static string ExecAndRead(string file, string args, int timeoutMs)
     {
         try
         {
@@ -310,7 +325,7 @@ public class FFFocusTracker
         catch { return string.Empty; }
     }
 
-    private static string FindOnPath(string name)
+    static string FindOnPath(string name)
     {
         string path = Environment.GetEnvironmentVariable("PATH");
         if (string.IsNullOrEmpty(path)) return string.Empty;
@@ -325,7 +340,7 @@ public class FFFocusTracker
         return string.Empty;
     }
 
-    private static string ExtractDigits(string s)
+    static string ExtractDigits(string s)
     {
         if (string.IsNullOrEmpty(s)) return string.Empty;
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -397,7 +412,11 @@ public class FFFocusTracker
     {
         try
         {
-            AppDomain.CurrentDomain.ApplicationExit += OnApplicationExit;
+
+#if !WINDOWS
+            try { InstallUnixSignalHandlers(); } catch { }
+#endif
+
             AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
             AppDomain.CurrentDomain.DomainUnload += OnDomainUnload;
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
@@ -407,11 +426,6 @@ public class FFFocusTracker
     #endif
         }
         catch { }
-    }
-
-    static void OnApplicationExit (object sender, EventArgs e)
-    {
-        LogShutdown("FFFocusTracker is Shutting Down...");
     }
 
     static void OnProcessExit(object sender, EventArgs e)
@@ -486,4 +500,41 @@ public class FFFocusTracker
         else
             FFCommon.Log("FFFocusTracker", "FFFocusTracker is shutting down.");
     }
+
+#if !WINDOWS
+    static void InstallUnixSignalHandlers()
+    {
+        // Arrange for our handler to be called on common termination signals.
+        // (We do NOT log here; we just capture the reason and exit cleanly,
+        //  letting OnProcessExit write the log synchronously.)
+        try {
+            signal(SIGTERM, _unixSigHandler);
+            signal(SIGINT,  _unixSigHandler);
+            signal(SIGHUP,  _unixSigHandler);
+            signal(SIGQUIT, _unixSigHandler);
+        } catch { }
+    }
+    
+    static void OnUnixSignal(int sig)
+    {
+        try
+        {
+            string name;
+            if      (sig == SIGTERM) name = "SIGTERM";
+            else if (sig == SIGINT)  name = "SIGINT";
+            else if (sig == SIGHUP)  name = "SIGHUP";
+            else if (sig == SIGQUIT) name = "SIGQUIT";
+            else                     name = "SIG" + sig;
+    
+            if (string.IsNullOrEmpty(_shutdownReason))
+                _shutdownReason = name;
+            else
+                _shutdownReason = _shutdownReason + " | " + name;
+        }
+        catch { }
+    
+        // Trigger normal teardown so AppDomain.ProcessExit runs and logs once.
+        try { System.Environment.Exit(0); } catch { }
+    }
+#endif
 }
