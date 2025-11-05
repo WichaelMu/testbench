@@ -340,7 +340,7 @@ public static string GetBaseDir ()
         map[profileName] = ticks;
         last = profileName;
         SaveFocusState(last, map);
-        Log("FFFocusTracker", $"Focused profile now: {profileName}{Environment.NewLine}");
+        Log("FFFocusTracker", $"Focused profile now: {profileName}");
     }
 
     // ----------------------
