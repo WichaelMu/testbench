@@ -49,7 +49,8 @@ def set_environment (environment):
         case 'NONPROD':
             USE_PROD = False
         case _:
-            raise Exception ('what')
+            ENVIRONMENT = environment
+            return
 
     ENVIRONMENT = 'PROD' if USE_PROD else 'NONPROD'
     refresh_environment ()
@@ -59,7 +60,7 @@ def set_access_token ():
     client_id = credentials[ENVIRONMENT]['client_id']
     client_secret = credentials[ENVIRONMENT]['client_secret']
     token_url = credentials[ENVIRONMENT]['token_url']
-    scope = credentials[ENVIRONMENT]['scope']
+    scope = credentials.get (ENVIRONMENT, {}).get ('scope', {})
 
     payload = {
         'grant_type': 'client_credentials',
