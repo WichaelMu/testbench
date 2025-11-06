@@ -4,10 +4,12 @@ DEFINE_ARG=""
 DEFINES=()
 OUT_FILE=""
 SOURCE_FILES=()
+NO_AOT_FLAG=0
 
 usage() {
-  echo "Usage: $0 [--define DEFINE1,DEFINE2,...] --out OUTFILE --source FILE1.cs [FILE2.cs ...]"
+  echo "Usage: $0 [--define DEFINE1,DEFINE2,...] [--no-aot] --out OUTFILE --source FILE1.cs [FILE2.cs ...]"
   echo "  --define   Comma-separated list of C# preprocessor defines. Optional."
+  echo "  --no-aot   Skip Mono AOT step after build. Optional."
   echo "  --out      Output file path. Required."
   echo "  --source   Space-separated list of C# source files. Required; must be last argument."
   exit 1
@@ -25,6 +27,7 @@ while [[ $# -gt 0 ]]; do
         usage
       fi
       ;;
+
     --out)
       if [[ -n "$2" && "$2" != --* ]]; then
         OUT_FILE="$2"
@@ -34,6 +37,12 @@ while [[ $# -gt 0 ]]; do
         usage
       fi
       ;;
+
+    --no-aot)
+      NO_AOT_FLAG=1
+      shift
+      ;;
+
     --source)
       shift
       if [[ $# -eq 0 ]]; then
@@ -45,13 +54,16 @@ while [[ $# -gt 0 ]]; do
         shift
       done
       ;;
+
     -h|--help|?)
       usage
       ;;
+
     *)
       echo "Unknown argument: $1"
       usage
       ;;
+
   esac
 done
 
@@ -92,10 +104,30 @@ set +x
 
 EXIT_CODE=$?
 
-if [[ $EXIT_CODE -eq 0 ]]; then
-  echo "Build succeeded: $OUT_FILE"
-else
+if [[ $EXIT_CODE -ne 0 ]]; then
   echo "Build failed."
   exit $EXIT_CODE
 fi
 
+echo "Build succeeded: $OUT_FILE"
+
+# Decide whether to AOT (env NO_AOT=1 OR flag --no-aot disables it)
+if [[ "${NO_AOT:-$NO_AOT_FLAG}" = "1" ]]; then
+  echo "Skipping AOT (requested via --no-aot or NO_AOT=1)."
+  exit 0
+fi
+
+# --- Mono AOT (Ahead-Of-Time) compile ---
+if command -v mono >/dev/null 2>&1; then
+  echo "AOT-compiling with: mono --aot=full \"$OUT_FILE\" ..."
+  if mono --aot=full "$OUT_FILE"; then
+    if [[ -f "${OUT_FILE}.so" ]]; then
+      strip -s "${OUT_FILE}.so" 2>/dev/null || true
+    fi
+    echo "AOT done."
+  else
+    echo "Warning: mono --aot failed; continuing with IL image."
+  fi
+else
+  echo "Warning: 'mono' not found; skipping AOT."
+fi

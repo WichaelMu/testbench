@@ -37,7 +37,8 @@ public class FFLinkRouter
 			if (Running != null && Running.Count > 0)
 			{
 				// 1) LAST FOCUSED among RUNNING (top priority)
-				long bestTicks = long.MinValue;
+				long BestTicks = long.MinValue;
+
 				int i = 0;
 				while (i < Running.Count)
 				{
@@ -45,14 +46,16 @@ public class FFLinkRouter
 					if (!string.IsNullOrEmpty (RunningProfileName))
 					{
 						long MTime;
-						if (FocusTicks.TryGetValue (RunningProfileName, out MTime) && MTime > bestTicks)
+						if (FocusTicks.TryGetValue (RunningProfileName, out MTime) && MTime > BestTicks)
 						{
-							bestTicks = MTime;
+							BestTicks = MTime;
 							Chosen = RunningProfileName;
 						}
 					}
+
 					i++;
 				}
+
 				if (!string.IsNullOrEmpty (Chosen))
 					Reason = "Picked by LAST-FOCUSED among running.";
 
@@ -69,6 +72,7 @@ public class FFLinkRouter
 
 							break;
 						}
+
 						k++;
 					}
 				}
@@ -78,6 +82,7 @@ public class FFLinkRouter
 				{
 					DateTime Latest = DateTime.MinValue;
 					string LatestProfile = string.Empty;
+
 					int k = 0;
 					while (k < Running.Count)
 					{
@@ -86,6 +91,7 @@ public class FFLinkRouter
 							Latest = Running[k].StartTimeUtc;
 							LatestProfile = Running[k].ProfileName;
 						}
+
 						k++;
 					}
 					if (!string.IsNullOrEmpty (LatestProfile))
@@ -110,14 +116,14 @@ public class FFLinkRouter
 			FFCommon.Log ("FFLinkRouter", "Decision: profile='" + Chosen + "' reason='" + Reason + "'");
 			if (!FFCommon.LaunchFirefox (Chosen, Url))
 			{
-				FFCommon.NotifyError ("FF Link Router", "Failed to launch Firefox. Opening logs.");
+				FFCommon.SendNotification ("FF Link Router", "Failed to launch Firefox. Opening logs.");
 				FFCommon.OpenLogsFolderFailSafe ();
 			}
 		}
 		catch (Exception ex)
 		{
 			FFCommon.LogException ("FFLinkRouter", "Main", ex);
-			FFCommon.NotifyError ("FF Link Router crashed", ex.Message);
+			FFCommon.SendNotification ("FF Link Router crashed", ex.Message);
 			FFCommon.OpenLogsFolderFailSafe ();
 		}
 		finally
@@ -127,12 +133,12 @@ public class FFLinkRouter
 		}
 	}
 
-	private static string ExtractUrlArg (string[] args)
+	private static string ExtractUrlArg (string[] Args)
 	{
-		if (args == null || args.Length == 0)
+		if (Args == null || Args.Length == 0)
 			return string.Empty;
 
-		string a = args[0];
+		string a = Args[0];
 		if (string.IsNullOrEmpty (a))
 			return string.Empty;
 
