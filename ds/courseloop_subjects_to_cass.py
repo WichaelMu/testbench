@@ -27,11 +27,11 @@ def main ():
     dsc.set_access_token ()
 
     spk_cat_type_rules     = 'https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/RaaS/v1/StudyPackageCategoryTypeRules?q=CurriculumType=SJ'
-    active_sok_header      = 'https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/WS/v1/Curriculum/ReadActiveOrHighestVersionHeaderBySpk/{source.input.subjects[0].code}'
-    spk_details            = 'https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/WS/v1/Curriculum/ReadForStudyPackage/{callouts.active_spk_header.output.StudyPackageNumber}/{callouts.active_spk_header.output.StudyPackageVersionNumber}'
+    active_sok_header      = 'https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/WS/v1/Curriculum/ReadActiveOrHighestVersionHeaderBySpk/17136'
+    spk_details            = 'https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/WS/v1/Curriculum/ReadForStudyPackage/35315/1'
     external_org_id_number = 'https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/RaaS/v1/ExtOrgUnits?q=Code={source.input.subjects[0].external_provider[0].provider_name.value}'
 
-    print (dsc.make_get_request (spk_cat_type_rules))
+    print (dsc.make_get_request (spk_details))
 
 if (__name__ == '__main__'):
     main ()
