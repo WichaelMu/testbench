@@ -34,7 +34,7 @@ public class FFFocusTracker
 	static DateTime LastNoWindowLogUTC = DateTime.MinValue;
 	static DateTime LastGNOMEFalseLogUTC = DateTime.MinValue;
 
-	public static void Main (string[] args)
+	public static void Main (string[] Args)
 	{
 		int ProcessId = System.Diagnostics.Process.GetCurrentProcess ().Id;
 #if LINUX
@@ -51,12 +51,13 @@ public class FFFocusTracker
 
 		try
 		{
+			FFCommon.SendNotification ("FFFocusTracker", "FFFocusTracker has begun.");
 			RunLoop ();
 		}
 		catch (Exception ex)
 		{
 			FFCommon.LogException ("FFFocusTracker", "Main", ex);
-			FFCommon.NotifyError ("FF Focus Tracker crashed", ex.Message);
+			FFCommon.SendNotification ("FF Focus Tracker crashed", ex.Message);
 			FFCommon.OpenLogsFolderFailSafe ();
 		}
 	}
@@ -297,17 +298,17 @@ public class FFFocusTracker
 
 	static string FindOnPath (string Name)
 	{
-		string Path = Environment.GetEnvironmentVariable ("PATH");
-		if (string.IsNullOrEmpty (Path))
+		string PathVariable = Environment.GetEnvironmentVariable ("PATH");
+		if (string.IsNullOrEmpty (PathVariable))
 			return string.Empty;
 
-		string[] Parts = Path.Split (':');
+		string[] Parts = PathVariable.Split (':');
 		int i = 0;
 		while (i < Parts.Length)
 		{
-			string cand = Path.Combine (Parts[i], Name);
-			if (File.Exists (cand))
-				return cand;
+			string CombinedFilePath = Path.Combine (Parts[i], Name);
+			if (File.Exists (CombinedFilePath))
+				return CombinedFilePath;
 
 			i++;
 		}

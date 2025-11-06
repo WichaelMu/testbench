@@ -116,14 +116,14 @@ public class FFLinkRouter
 			FFCommon.Log ("FFLinkRouter", "Decision: profile='" + Chosen + "' reason='" + Reason + "'");
 			if (!FFCommon.LaunchFirefox (Chosen, Url))
 			{
-				FFCommon.NotifyError ("FF Link Router", "Failed to launch Firefox. Opening logs.");
+				FFCommon.SendNotification ("FF Link Router", "Failed to launch Firefox. Opening logs.");
 				FFCommon.OpenLogsFolderFailSafe ();
 			}
 		}
 		catch (Exception ex)
 		{
 			FFCommon.LogException ("FFLinkRouter", "Main", ex);
-			FFCommon.NotifyError ("FF Link Router crashed", ex.Message);
+			FFCommon.SendNotification ("FF Link Router crashed", ex.Message);
 			FFCommon.OpenLogsFolderFailSafe ();
 		}
 		finally

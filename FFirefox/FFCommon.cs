@@ -129,7 +129,7 @@ public static class FFCommon
 		catch { }
 	}
 
-	public static void NotifyError (string Title, string Body)
+	public static void SendNotification (string Title, string Body)
 	{
 		try
 		{
@@ -499,7 +499,7 @@ public static class FFCommon
 
 			return string.Empty;
 #elif LINUX
-			string ProcessPath = "/proc/" + pid + "/cmdline";
+			string ProcessPath = "/proc/" + ProcessId + "/cmdline";
 
 			if (!File.Exists (ProcessPath))
 				return string.Empty;
@@ -652,7 +652,7 @@ public static class FFCommon
 
 #if !WINDOWS
 			// force X11 so xdotool/xprop can see it
-			Exec.EnvironmentVariables["MOZ_ENABLE_WAYLAND"] = "0";
+			FirefoxExec.EnvironmentVariables["MOZ_ENABLE_WAYLAND"] = "0";
 #endif
 
 			Process P = Process.Start (FirefoxExec);
