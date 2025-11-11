@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Firefox (MW)
+Exec=env MOZ_ENABLE_WAYLAND=0 firefox %u
+Icon=firefox
+Categories=Network;WebBrowser;
+MimeType=x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
+StartupWMClass=firefox
