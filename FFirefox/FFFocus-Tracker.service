@@ -1,0 +1,32 @@
+[Unit]
+Description=FF Focus Tracker (records last-focused Firefox profile)
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+
+# 1) Load session env we capture just before start (lives in /run/user/$UID)
+EnvironmentFile=-%t/ff.env
+
+# 2) Populate that env file from the current session (DISPLAY/WAYLAND/DBUS/XAUTHORITY)
+ExecStartPre=/bin/sh -lc ' \
+  rm -f %t/ff.env; \
+  [ -n "$DISPLAY" ] && echo DISPLAY="$DISPLAY" >> %t/ff.env; \
+  [ -n "$WAYLAND_DISPLAY" ] && echo WAYLAND_DISPLAY="$WAYLAND_DISPLAY" >> %t/ff.env; \
+  [ -n "$XDG_SESSION_TYPE" ] && echo XDG_SESSION_TYPE="$XDG_SESSION_TYPE" >> %t/ff.env; \
+  [ -S "$XDG_RUNTIME_DIR/bus" ] && echo DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus" >> %t/ff.env; \
+  xa=$(ls -1t "$XDG_RUNTIME_DIR"/.mutter-Xwaylandauth.* 2>/dev/null | head -n1); \
+  [ -n "$xa" ] && echo XAUTHORITY="$xa" >> %t/ff.env; \
+  true'
+
+# Your existing settings
+Environment=HOME=/home/Absolution
+Environment=XDG_DATA_HOME=/home/Absolution/.local/share
+WorkingDirectory=/home/Absolution
+ExecStart=/usr/local/bin/FFFocusTracker
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
