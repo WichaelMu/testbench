@@ -66,6 +66,8 @@ public class FFFocusTracker
 	{
 		string LastSeenProfile = string.Empty;
 
+		Thread.Sleep (10_000);
+
 		while (true)
 		{
 			try
@@ -492,39 +494,4 @@ public class FFFocusTracker
 		else
 			FFCommon.Log ("FFFocusTracker", "FFFocusTracker is shutting down.");
 	}
-
-#if LINUX
-	static void InstallUnixSignalHandlers ()
-	{
-		try
-		{
-			signal (SIGTERM, UnixSignalHandler);
-			signal (SIGINT, UnixSignalHandler);
-			signal (SIGHUP, UnixSignalHandler);
-			signal (SIGQUIT, UnixSignalHandler);
-		}
-		catch { }
-	}
-
-	static void OnUnixSignal (int Signal)
-	{
-		try
-		{
-			string SignalName;
-			if (Signal == SIGTERM) SignalName = "SIGTERM";
-			else if (Signal == SIGINT) SignalName = "SIGINT";
-			else if (Signal == SIGHUP) SignalName = "SIGHUP";
-			else if (Signal == SIGQUIT) SignalName = "SIGQUIT";
-			else SignalName = "SIG" + Signal;
-
-			if (string.IsNullOrEmpty (ShutdownReason))
-				ShutdownReason = SignalName;
-			else
-				ShutdownReason = ShutdownReason + " | " + SignalName;
-		}
-		catch { }
-
-		try { System.Environment.Exit (0); } catch { }
-	}
-#endif
 }
