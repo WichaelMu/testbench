@@ -31,7 +31,9 @@ def main ():
     spk_details            = 'https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/WS/v1/Curriculum/ReadForStudyPackage/35315/1'
     external_org_id_number = 'https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/RaaS/v1/ExtOrgUnits?q=Code={source.input.subjects[0].external_provider[0].provider_name.value}'
 
-    print (dsc.make_get_request (spk_details))
+    test = "https://uts-test.t1cloud.com/T1Default/CiAnywhere/Web/UTS-TEST/Api/WS/v1/EtlRunHistory/ReadByJobId/3065555"
+
+    print (dsc.make_get_request (test))
 
 if (__name__ == '__main__'):
     main ()
