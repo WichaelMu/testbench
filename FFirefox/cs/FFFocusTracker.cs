@@ -28,6 +28,8 @@ public class FFFocusTracker
 	const int SIGHUP = 1;
 	const int SIGQUIT = 3;
 	const int SIGTERM = 15;
+
+	static readonly SigHandler UnixSigHandler = OnUnixSignal;
 #endif
 
 
@@ -99,6 +101,44 @@ public class FFFocusTracker
 			Thread.Sleep (400);
 		}
 	}
+
+#if LINUX
+	static void InstallUnixSignalHandlers()
+	{
+	    // Arrange for our handler to be called on common termination signals.
+	    // (We do NOT log here; we just capture the reason and exit cleanly,
+	    //  letting OnProcessExit write the log synchronously.)
+	    try {
+		signal(SIGTERM, UnixSigHandler);
+		signal(SIGINT,  UnixSigHandler);
+		signal(SIGHUP,  UnixSigHandler);
+		signal(SIGQUIT, UnixSigHandler);
+	    } catch { }
+	}
+
+	static void OnUnixSignal(int sig)
+	{
+	    try
+	    {
+		string name;
+		if      (sig == SIGTERM) name = "SIGTERM";
+		else if (sig == SIGINT)  name = "SIGINT";
+		else if (sig == SIGHUP)  name = "SIGHUP";
+		else if (sig == SIGQUIT) name = "SIGQUIT";
+		else                     name = "SIG" + sig;
+
+		if (string.IsNullOrEmpty(ShutdownReason))
+		    ShutdownReason = name;
+		else
+		    ShutdownReason = ShutdownReason + " | " + name;
+	    }
+	    catch { }
+
+	    // Trigger normal teardown so AppDomain.ProcessExit runs and logs once.
+	    try { System.Environment.Exit(0); } catch { }
+	}
+#endif
+
 
 	static string DetectActiveFirefoxProfile ()
 	{

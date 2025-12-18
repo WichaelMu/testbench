@@ -1,0 +1,13 @@
+[Unit]
+Description=FF Focus Watcher (Wayland/X11 -> ~/.local/share/FF/focus.json)
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -u %h/.local/bin/ff-focus-watcher.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
