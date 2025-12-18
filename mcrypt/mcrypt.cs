@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 class MCrypt
 {
@@ -74,28 +75,31 @@ class MCrypt
 
 	static int EncryptMultiple (string[] InputPaths, string OutputPath, string Password)
 	{
-		foreach (string s in InputPaths)
+		int ReturnCode = 0;
+		Parallel.ForEach (InputPaths, (s, State) =>
 		{
 			O.Print ($"Encrypting {s}...");
 
 			string[] FQFileName = s.Split (Path.DirectorySeparatorChar);
 			string FileName = FQFileName[FQFileName.Length - 1];
-			int ReturnCode = EncryptFile (s, Path.Combine (OutputPath, FileName), Password);
+			ReturnCode = EncryptFile (s, Path.Combine (OutputPath, FileName), Password);
+
 			if (ReturnCode != 0)
 			{
 				if (!GetSetting<bool> ("Skip"))
 				{
 					O.Print ($"Error Encrypting {s}!\n--skip not specified. Terminating", ConsoleColor.Red);
-					return ReturnCode;
+
+					State.Break ();
 				}
 				else
 				{
 					O.Print ($"Error Encrypting {s}!\n--skip specified. Skipping", ConsoleColor.Yellow);
 				}
 			}
-		}
+		});
 
-		return 0;
+		return ReturnCode;
 	}
 
 	static int EncryptFile (string InputPath, string OutputPath, string Password)
@@ -174,7 +178,8 @@ class MCrypt
 
 	static int DecryptDirectory (string[] InputPaths, string OutputPath, string Password)
 	{
-		foreach (string s in InputPaths)
+		int ReturnCode = 0;
+		Parallel.ForEach (InputPaths, (s, State) =>
 		{
 			O.Print ($"Decrypting {s}...");
 
@@ -182,27 +187,30 @@ class MCrypt
 			if (FQFileName.Length == 0)
 			{
 				O.Print ($"Error Decrypting {s}!\nInputPath received a path without a parent directory.", ConsoleColor.Red);
-				return 1;
+
+				ReturnCode = 1;
+				State.Break ();
 			}
 
 			string FileName = FQFileName[FQFileName.Length - 1];
-			int ReturnCode = DecryptFile (s, Path.Combine (OutputPath, FileName), Password);
+			ReturnCode = DecryptFile (s, Path.Combine (OutputPath, FileName), Password);
 
 			if (ReturnCode != 0)
 			{
 				if (!GetSetting<bool> ("Skip"))
 				{
 					O.Print ($"Error Decrypting {s}!\n--skip not specified. Terminating", ConsoleColor.Red);
-					return ReturnCode;
+
+					State.Break ();
 				}
 				else
 				{
 					O.Print ($"Error Decrypting {s}!\n--skip specified. Skipping", ConsoleColor.Yellow);
 				}
 			}
-		}
+		});
 
-		return 0;
+		return ReturnCode;
 	}
 	
 	static int DecryptFile (string InputPath, string OutputPath, string Password)
