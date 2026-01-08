@@ -37,7 +37,7 @@ def get_environment ():
     return USE_PROD
 
 def get_wenvironment ():
-    return 'PROD' if get_environment () else 'NONPROD'
+    return 'prod' if get_environment () else 'nonprod'
 
 def set_environment (environment):
     global USE_PROD
@@ -139,7 +139,14 @@ def fexists (fpath):
 
 GENERATED_PARENT = 'generated'
 def save_generated (program_name, key, data):
-    generated_fq_path = os.path.join (GENERATED_PARENT, program_name, F'{get_wenvironment ()}-{key}.json')
+    if not os.path.exists (GENERATED_PARENT):
+        os.makedirs (GENERATED_PARENT)
+
+    base_program_dir = os.path.join (GENERATED_PARENT, program_name)
+    if not os.path.exists (base_program_dir):
+        os.makedirs (base_program_dir)
+
+    generated_fq_path = os.path.join (base_program_dir, F'{get_wenvironment ()}-{key}.json')
     write_json (generated_fq_path, data)
     return generated_fq_path
 
@@ -148,12 +155,12 @@ def load_generated (program_name, key):
 
     try:
         generated_fq_path = os.path.join (GENERATED_PARENT, program_name, fq_key)
-        print (F'Loading {fq_key}')
+        # print (F'Loading {fq_key}')
         loaded = load_json (generated_fq_path)
         return loaded
 
     except Exception as e:
-        print (F'\tFailed loading {fq_key}')
+        # print (F'\tFailed loading {fq_key}')
         return []
 
 def has_generated (program_name, key):
