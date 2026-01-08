@@ -26,23 +26,30 @@ from api_common import (
 
 import dscore as dsc
 
+PROGRAM_NAME = 'master-record-status-draft-support'
+
 def main ():
-    os_response    = dsc.load_json ('courses.json')
 
-    items = transform_and_clean_data(os_response, {})
-    print (len (items))
-    print (type (items))
-    print (type (items[0]))
-    print (items[0])
+    dsc.set_environment ('PROD')
+    items = []
 
-    courses: list  = seq (items) \
+    if (dsc.has_generated (PROGRAM_NAME, 'cleaned-items')):
+        items = dsc.load_generated (PROGRAM_NAME, 'cleaned-items')
+
+    else:
+        os_response = dsc.load_json ('courses.json')
+        items = transform_and_clean_data(os_response, {})
+        dsc.save_generated (PROGRAM_NAME, 'cleaned-items', items)
+
+    draft_courses: list  = seq (items) \
         .filter (lambda x: 'master_record_status' in x.keys ()) \
         .filter (lambda x: 'value' in x['master_record_status'].keys ()) \
-        .filter (lambda x: x['master_record_status']['value'] == 'draft') \
-        .map (lambda x: x['_source']) \
-        .to_list ()
+        .filter (lambda x: x['master_record_status']['value'] == 'draft')
 
-    print (courses)
+    draft_statuses = seq (draft_courses) \
+        .map (lambda x: x['status'])
+
+    print (draft_statuses.to_list ())
 
 if (__name__ == '__main__'):
     main ()
