@@ -3,7 +3,7 @@ from datetime import datetime
 import logging
 from ulid import monotonic as ulid
 
-RUNNING_FROM_LAMBDA = True;
+RUNNING_FROM_LAMBDA = False;
 """True if the current version is being executed in a Lambda environment. False if this code is a local debug version."""
 LOG_TRACES_ONLY = False;
 FORCE_COLOURISE = False;
