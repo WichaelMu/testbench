@@ -12,10 +12,6 @@ from bs4 import BeautifulSoup
 USE_PROD = False
 ENVIRONMENT = 'NO_ENVIRONMENT'
 
-COLLATED_COURSES_FPATH = F'{ENVIRONMENT}-collated-courses.json'
-COLLATED_SUBJECTS_FPATH = F'{ENVIRONMENT}-collated-subjects.json'
-COLLATED_FACULTY_COURSE_FPATH = F'{ENVIRONMENT}-collated-faculty-courses.json'
-
 global_access_token = ''
 
 def remove_html_elements (markup):
@@ -24,13 +20,7 @@ def remove_html_elements (markup):
     return markup
 
 def refresh_environment ():
-    global COLLATED_COURSES_FPATH
-    global COLLATED_SUBJECTS_FPATH
-    global COLLATED_FACULTY_COURSE_FPATH
-
-    COLLATED_COURSES_FPATH = F'{ENVIRONMENT}-collated-courses.json'
-    COLLATED_SUBJECTS_FPATH = F'{ENVIRONMENT}-collated-subjects.json'
-    COLLATED_FACULTY_COURSE_FPATH = F'{ENVIRONMENT}-collated-faculty-courses.json'
+    pass
 
 def get_environment ():
     global USE_PROD
@@ -138,6 +128,10 @@ def fexists (fpath):
     return os.path.isfile (fpath)
 
 GENERATED_PARENT = 'generated'
+def get_generated_path (program_name, key, extension = '.json'):
+    fq_key = F'{get_wenvironment ()}-{key}{extension}'
+    return os.path.join (GENERATED_PARENT, program_name, fq_key)
+
 def save_generated (program_name, key, data):
     if not os.path.exists (GENERATED_PARENT):
         os.makedirs (GENERATED_PARENT)
@@ -146,21 +140,18 @@ def save_generated (program_name, key, data):
     if not os.path.exists (base_program_dir):
         os.makedirs (base_program_dir)
 
-    generated_fq_path = os.path.join (base_program_dir, F'{get_wenvironment ()}-{key}.json')
+    generated_fq_path = get_generated_path (program_name, key)
     write_json (generated_fq_path, data)
     return generated_fq_path
 
 def load_generated (program_name, key):
-    fq_key = F'{get_wenvironment ()}-{key}.json'
 
     try:
-        generated_fq_path = os.path.join (GENERATED_PARENT, program_name, fq_key)
-        # print (F'Loading {fq_key}')
+        generated_fq_path = get_generated_path (program_name, key)
         loaded = load_json (generated_fq_path)
         return loaded
 
     except Exception as e:
-        # print (F'\tFailed loading {fq_key}')
         return []
 
 def has_generated (program_name, key):
@@ -171,8 +162,7 @@ def has_generated (program_name, key):
     if (not os.path.isdir (program_directory)):
         return False
 
-    generated_fq_path = os.path.join (program_directory, F'{get_wenvironment ()}-{key}.json')
-    return fexists (generated_fq_path)
+    return fexists (get_generated_path (program_name, key))
 
 def write_json (path, data):
     with open (path, 'w') as w:
@@ -206,7 +196,7 @@ def execute_parallel_requests (target_url, page_range, max_pages, extract_key, t
     return seq (page_range).map (lambda p: execute_request (p)).reduce (lambda x, y: x + y, []).to_list ()
 
 
-def request_in_parallel (target_url, extract_key, fpath):
+def request_in_parallel (target_url, extract_key, program_name, key, division = 1):
 
     max_pages = 1 << 16
 
@@ -218,7 +208,7 @@ def request_in_parallel (target_url, extract_key, fpath):
 
     # my nproc is 16. // 2 will return 8.
     # you can try increaasing this, but i have nothing left to throw up.
-    nproc = mp.cpu_count () // 2
+    nproc = mp.cpu_count () // division
 
     page_range_begin = 2 # We already made a GET REQ to ?page=1
     page_list = list (range (page_range_begin, max_pages + 1))
@@ -228,40 +218,9 @@ def request_in_parallel (target_url, extract_key, fpath):
     response_sequence = pseq (chunks).map (lambda x: execute_parallel_requests (target_url, x, max_pages, extract_key)).reduce (lambda x, y: x + y, []).to_list ()
     response_sequence += initial_request[extract_key] # Include the initial request.
 
-    write_json (fpath, response_sequence)
+    save_generated (program_name, key, response_sequence)
 
     return response_sequence
-
-def get_faculty_courses_lookup ():
-    with open (COLLATED_FACULTY_COURSE_FPATH, 'r') as courses:
-        deserialised = json.load (courses)
-        courses_lookup = pseq (deserialised) \
-            .filter (lambda x: 'code' in x.keys ()) \
-            .map (lambda x: { x['code']: x }) \
-            .reduce (lambda x, y: x | y)
-        return courses_lookup
-    return {}
-
-def get_courses ():
-    if (not fexists (COLLATED_COURSES_FPATH)):
-        print (F'No saved file found, creating {COLLATED_COURSES_FPATH}...')
-        return request_in_parallel (F'{get_api_url ()}/courses?debug_empty_arrays=true&debug_empty_strings=true&debug_null_values=true&page=', 'courses', COLLATED_COURSES_FPATH)
-
-    return load_json (COLLATED_COURSES_FPATH)
-
-def get_subjects ():
-    if (not fexists (COLLATED_SUBJECTS_FPATH)):
-        print (F'No saved file found, creating {COLLATED_SUBJECTS_FPATH}...')
-        return request_in_parallel (F'{get_api_url ()}/subjects?debug_empty_arrays=true&debug_empty_strings=true&debug_null_values=true&page=', 'subjects', COLLATED_SUBJECTS_FPATH)
-
-    return load_json (COLLATED_SUBJECTS_FPATH)
-
-def get_faculty_courses (faculty_code):
-    if (not os.path.isfile (COLLATED_FACULTY_COURSE_FPATH)):
-        print (F'No saved file found, creating {COLLATED_FACULTY_COURSE_FPATH}...')
-        return request_in_parallel (F'{get_api_url ()}/faculties/{faculty_code}/courses?debug_empty_arrays=true&debug_empty_strings=true&debug_null_values=true&page=', 'courses', COLLATED_FACULTY_COURSE_FPATH)
-
-    return load_json (COLLATED_FACULTY_COURSE_FPATH)
 
 def try_parse_int (i):
     try:
@@ -270,3 +229,8 @@ def try_parse_int (i):
     except:
         return False
     return False
+
+def to_xlsx (in_array, columns_to_keep, fq_output_path, sheet_name='Sheet1'):
+    df = pd.DataFrame.from_records (in_array) if in_array else pd.DataFrame ()
+    df = df.reindex (columns = columns_to_keep)
+    df.to_excel (fq_output_path, index=False, sheet_name = sheet_name)
