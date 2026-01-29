@@ -1,0 +1,72 @@
+source:
+  input:
+
+callouts:
+
+locals:
+  env:
+    eval:
+      f"{envar ('ENV')}"
+
+  data: source.input.data.smsstandard_code
+
+  smstandard_code_type_code: source.input.data.smstandard_code_type.code
+  smstandard_code_code: source.input.data.smstandard_code.code
+
+target:
+  output:
+    meta:
+      "@last_seen_at":
+        eval:
+          f"{iso8601 ()}"
+
+      event:
+        id: source.meta.kafka_key
+        source: source.meta.kafka_topic
+        type: source.input.type
+        time: source.input.time
+
+      system:
+        action:
+          eval:
+            F'{lower (source.input.data.smstandard_code.action)}'
+        id: source.input.id
+        sequence_no: source.input.aueduutsstudentsciasequencenumber
+        userid: source.input.aueduutsstudentsciauserid
+        function: source.input.aueduutsstudentsciafunction
+        status: source.input.aueduutsstudentsciastatus
+        subscriber_id: source.input.aueduutsstudentsciasubscriberid
+        status_code: source.input.aueduutsstudentsciastatuscode
+        award_no: source.input.aueduutsstudentsciastandardcodetype
+
+      student:
+        spk_no: source.input.aueduutsstudentsciastandardcode
+
+    data:
+      merge!:
+        - source.input.data.smstandard_code
+
+      erase!:
+        - data.action
+
+sinks:
+#   stdout:
+#     # parallel: true
+#     output:
+
+  streaming:
+    parallel: true
+    cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
+    cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
+    topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
+
+  opensearch:
+    parallel: true
+    endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
+    index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
+    document_id: f"{locals.smstandard_code_type_code},{locals.smstandard_code_code}"
+    iam:
+      region: f"{envar ('IAM_REGION')}"
+      service: f"{envar ('IAM_SERVICE_NAME')}"
+
+# yield: sinks.stdout.output

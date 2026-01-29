@@ -1,0 +1,70 @@
+source:
+  input:
+
+callouts:
+
+locals:
+  env:
+    eval:
+      f"{envar ('ENV')}"
+
+  student_id: source.input.data.student_sponsor.student_id
+  sponsor_code: source.input.data.student_sponsor.sponsor.code
+  ssp_code: source.input.data.student_sponsor.student_study_package.study_package_code
+
+target:
+  output:
+    meta:
+      "@last_seen_at":
+        eval:
+          f"{iso8601 ()}"
+
+      event:
+        id: source.meta.kafka_key
+        source: source.meta.kafka_topic
+        type: source.input.type
+        time: source.input.time
+
+      system:
+        action:
+          eval:
+            F'{lower (source.input.data.student_sponsor.action)}'
+        id: source.input.id
+        sequence_no: source.input.aueduutsstudentsciasequencenumber
+        userid: source.input.aueduutsstudentsciauserid
+        function: source.input.aueduutsstudentsciafunction
+        status: source.input.aueduutsstudentsciastatus
+        subscriber_id: source.input.aueduutsstudentsciasubscriberid
+        status_code: source.input.aueduutsstudentsciastatuscode
+        student_id: source.input.aueduutsstudentsciastudentid
+        sponsor_seq_no: source.input.aueduutsstudentciaspnsrseqno
+        sponsor_id: source.input.aueduutsstudentsciastandardcodetype
+
+    data:
+      merge!:
+        - source.input.data.student_sponsor
+
+      erase!:
+        - data.action
+
+sinks:
+  stdout:
+    # parallel: true
+    output:
+
+#   streaming:
+#     parallel: true
+#     cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
+#     cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
+#     topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
+# 
+#   opensearch:
+#     parallel: true
+#     endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
+#     index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
+#     document_id: f"{locals.student_id},{locals.sponsor.code},{locals.ssp_code}"
+#     iam:
+#       region: f"{envar ('IAM_REGION')}"
+#       service: f"{envar ('IAM_SERVICE_NAME')}"
+
+yield: sinks.stdout.output
