@@ -10,7 +10,7 @@ def main ():
 
     dict_form = ast.literal_eval (inbound)
 
-    result = json.dumps (dict_form)
+    result = json.dumps (dict_form, indent = 4)
     return result
 
 if (__name__ == '__main__'):
