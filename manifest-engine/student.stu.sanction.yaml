@@ -8,9 +8,9 @@ locals:
     eval:
       f"{envar ('ENV')}"
 
-  student_id: source.input.data.student_sponsor.student_id
-  sponsor_code: source.input.data.student_sponsor.sponsor.code
-  ssp_code: source.input.data.student_sponsor.student_study_package.study_package_code
+  student_id: source.input.data.student_sanction.student_id
+  sanction_code: source.input.data.student_sanction.sanction_code.code
+  reason_code: source.input.data.student_sanction.reason_code.code
 
 target:
   output:
@@ -28,7 +28,7 @@ target:
       system:
         action:
           eval:
-            F'{lower (source.input.data.student_sponsor.action)}'
+            F'{lower (source.input.data.student_sanction.action)}'
         id: source.input.id
         sequence_no: source.input.aueduutsstudentsciasequencenumber
         userid: source.input.aueduutsstudentsciauserid
@@ -37,34 +37,33 @@ target:
         subscriber_id: source.input.aueduutsstudentsciasubscriberid
         status_code: source.input.aueduutsstudentsciastatuscode
         student_id: source.input.aueduutsstudentsciastudentid
-        sponsor_seq_no: source.input.aueduutsstudentciaspnsrseqno
-        sponsor_id: source.input.aueduutsstudentsciastandardcodetype
+        seq_no: source.input.aueduutsstudentciasctnseqno
 
     data:
       merge!:
-        - source.input.data.student_sponsor
+        - source.input.data.student_sanction
 
       erase!:
         - data.action
 
 sinks:
-  stdout:
-    # parallel: true
-    output:
+#   stdout:
+#     # parallel: true
+#     output:
 
-#   streaming:
-#     parallel: true
-#     cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
-#     cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
-#     topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
-# 
-#   opensearch:
-#     parallel: true
-#     endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
-#     index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
-#     document_id: f"{locals.student_id},{locals.sponsor.code},{locals.ssp_code}"
-#     iam:
-#       region: f"{envar ('IAM_REGION')}"
-#       service: f"{envar ('IAM_SERVICE_NAME')}"
+  streaming:
+    parallel: true
+    cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
+    cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
+    topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
 
-yield: sinks.stdout.output
+  opensearch:
+    parallel: true
+    endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
+    index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
+    document_id: f"{locals.student_id},{locals.sanction_code},{locals.reason_code}"
+    iam:
+      region: f"{envar ('IAM_REGION')}"
+      service: f"{envar ('IAM_SERVICE_NAME')}"
+
+# yield: sinks.stdout.output

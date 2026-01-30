@@ -8,9 +8,7 @@ locals:
     eval:
       f"{envar ('ENV')}"
 
-  student_id: source.input.data.student_sponsor.student_id
-  sponsor_code: source.input.data.student_sponsor.sponsor.code
-  ssp_code: source.input.data.student_sponsor.student_study_package.study_package_code
+  student_id: source.input.data.student_contact_detail.student_details.student_id
 
 target:
   output:
@@ -28,7 +26,7 @@ target:
       system:
         action:
           eval:
-            F'{lower (source.input.data.student_sponsor.action)}'
+            F'{lower (source.input.data.student_contact_detail.action)}'
         id: source.input.id
         sequence_no: source.input.aueduutsstudentsciasequencenumber
         userid: source.input.aueduutsstudentsciauserid
@@ -36,13 +34,13 @@ target:
         status: source.input.aueduutsstudentsciastatus
         subscriber_id: source.input.aueduutsstudentsciasubscriberid
         status_code: source.input.aueduutsstudentsciastatuscode
+
+      student:
         student_id: source.input.aueduutsstudentsciastudentid
-        sponsor_seq_no: source.input.aueduutsstudentciaspnsrseqno
-        sponsor_id: source.input.aueduutsstudentsciastandardcodetype
 
     data:
       merge!:
-        - source.input.data.student_sponsor
+        - source.input.data.student_contact_detail
 
       erase!:
         - data.action
@@ -62,7 +60,7 @@ sinks:
     parallel: true
     endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
     index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
-    document_id: f"{locals.student_id},{locals.sponsor_code},{locals.ssp_code}"
+    document_id: f"{locals.student_id}"
     iam:
       region: f"{envar ('IAM_REGION')}"
       service: f"{envar ('IAM_SERVICE_NAME')}"
