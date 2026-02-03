@@ -8,6 +8,8 @@ import pandas as pd
 from functional import pseq, seq
 from bs4 import BeautifulSoup
 
+import debug_utils as dbg
+
 # Environment settings.
 USE_PROD = False
 ENVIRONMENT = 'NO_ENVIRONMENT'
@@ -133,19 +135,13 @@ def get_generated_path (program_name, key, extension = '.json'):
     return os.path.join (GENERATED_PARENT, program_name, fq_key)
 
 def save_generated (program_name, key, data):
-    if not os.path.exists (GENERATED_PARENT):
-        os.makedirs (GENERATED_PARENT)
-
-    base_program_dir = os.path.join (GENERATED_PARENT, program_name)
-    if not os.path.exists (base_program_dir):
-        os.makedirs (base_program_dir)
+    ensure_generated (program_name)
 
     generated_fq_path = get_generated_path (program_name, key)
     write_json (generated_fq_path, data)
     return generated_fq_path
 
 def load_generated (program_name, key):
-
     try:
         generated_fq_path = get_generated_path (program_name, key)
         loaded = load_json (generated_fq_path)
@@ -163,6 +159,14 @@ def has_generated (program_name, key):
         return False
 
     return fexists (get_generated_path (program_name, key))
+
+def ensure_generated (program_name):
+    if not os.path.exists (GENERATED_PARENT):
+        os.makedirs (GENERATED_PARENT)
+
+    base_program_dir = os.path.join (GENERATED_PARENT, program_name)
+    if not os.path.exists (base_program_dir):
+        os.makedirs (base_program_dir)
 
 def write_json (path, data):
     with open (path, 'w') as w:
@@ -221,6 +225,22 @@ def request_in_parallel (target_url, extract_key, program_name, key, division = 
     save_generated (program_name, key, response_sequence)
 
     return response_sequence
+
+def get_all_academic_items (academic_type):
+    PROGRAM_NAME = 'dscore'
+    SAVED_NAME = F'all-{academic_type}'
+
+    response = None
+
+    if (not has_generated (PROGRAM_NAME, SAVED_NAME)):
+        target_url = F'{get_api_url ()}/{academic_type}?page='
+        response = request_in_parallel (target_url, academic_type, PROGRAM_NAME, SAVED_NAME)
+
+    else:
+        response = load_generated (PROGRAM_NAME, SAVED_NAME)
+        dbg.dinfo (F'Loaded {academic_type} from {get_generated_path (PROGRAM_NAME, SAVED_NAME)}')
+
+    return response
 
 def try_parse_int (i):
     try:
