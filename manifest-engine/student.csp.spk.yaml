@@ -1,0 +1,74 @@
+source:
+  input:
+
+callouts:
+
+locals:
+  env:
+    eval:
+      f"{envar ('ENV')}"
+
+  data:
+    study_package:
+      study_package:
+        code: source.input.data.study_package.study_package_identity.study_package_code
+        version: source.input.data.study_package.study_package_identity.version
+        number: source.input.data.study_package.study_package_identity.study_package_number
+      code: source.input.aueduutsstudentsciaspkcode
+      version: source.input.aueduutsstudentsciaspkversion
+
+target:
+  output:
+    meta:
+      "@last_seen_at":
+        eval:
+          f"{iso8601 ()}"
+
+      event:
+        id: source.meta.kafka_key
+        source: source.meta.kafka_topic
+        type: source.input.type
+        time: source.input.time
+
+      system:
+        action:
+          eval:
+            F'{lower (source.input.data.study_package.action)}'
+        id: source.input.id
+        sequence_no: source.input.aueduutsstudentsciasequencenumber
+        userid: source.input.aueduutsstudentsciauserid
+        function: source.input.aueduutsstudentsciafunction
+        status: source.input.aueduutsstudentsciastatus
+        subscriber_id: source.input.aueduutsstudentsciasubscriberid
+        status_code: source.input.aueduutsstudentsciastatuscode
+
+    data:
+      merge!:
+        - source.input.data.study_package
+        - locals.data
+
+      erase!:
+        - data.action
+        - data.study_package_identity
+
+sinks:
+#   stdout:
+#     # parallel: true
+#     output:
+
+  streaming:
+    parallel: true
+    cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
+    cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
+    topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
+
+  opensearch:
+    parallel: true
+    endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
+    index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
+    document_id: f"{locals.data.study_package.code},{locals.data.study_package.version}"
+    iam:
+      region: f"{envar ('IAM_REGION')}"
+      service: f"{envar ('IAM_SERVICE_NAME')}"
+
+# yield: sinks.stdout.output
