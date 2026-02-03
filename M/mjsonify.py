@@ -8,10 +8,14 @@ def main ():
     if (len (inbound) == 0):
         return json.dumps ({ 'MJSN': 'Nothing was received as input.' })
 
-    dict_form = ast.literal_eval (inbound)
+    try:
+        dict_form = ast.literal_eval (inbound)
 
-    result = json.dumps (dict_form, indent = 4)
-    return result
+        result = json.dumps (dict_form, indent = 4)
+        return result
+
+    except:
+        return inbound
 
 if (__name__ == '__main__'):
     print (main ())
