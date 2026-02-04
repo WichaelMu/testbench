@@ -9,24 +9,55 @@ import debug_utils as dbg
 
 PROGRAM_NAME = 'courses-with-struct'
 
+def get_recursively_relationship (relationship, current):
+    result = []
+
+
+    result += seq (relationship) \
+        .map (lambda x: {
+            **current,
+            'code':     x['child_record']['code'],
+            'name':     x['child_record']['name'],
+            'nickname': x['child_record']['nickname']
+        }) \
+        .to_list ()
+
+    result += seq (relationship) \
+        .filter (lambda x: 'curriculum_structure_relationship' in x.keys ()) \
+        .map (lambda x: get_recursively_relationship (x['curriculum_structure_relationship'])) \
+        .to_list ()
+
+    result += seq (relationship) \
+        .filter (lambda x: 'curriculum_structure_container' in x.keys ()) \
+        .map (lambda x: get_recursively_container (x['curriculum_structure_container'], current)) \
+        .to_list ()
+
+    return result
+
+def get_recursively_container (container, current):
+    return get_what_we_need (container, current)
+
 def get_what_we_need (curriculum_structure_container, current):
     csr_mapped = []
 
     for csc in curriculum_structure_container:
         title = csc.get ('title', '')
         curriculum_structure_relationship = csc.get ('curriculum_structure_relationship', [])
+        curriculum_structure_container    = csc.get ('curriculum_structure_container', [])
 
-        csr_mapped += seq (curriculum_structure_relationship) \
-            .filter (lambda x: 'child_record' in x.keys ()) \
-            .filter (lambda x: 'code' in x['child_record'].keys ()) \
-            .filter (lambda x: 'name' in x['child_record'].keys ()) \
-            .filter (lambda x: 'nickname' in x['child_record'].keys ()) \
+        grr = get_recursively_relationship (curriculum_structure_relationship, current)
+        grc = get_recursively_container (curriculum_structure_container, current)
+
+        csr_mapped += seq (grr + grc) \
+            .filter (lambda x: 'code' in x.keys ()) \
+            .filter (lambda x: 'name' in x.keys ()) \
+            .filter (lambda x: 'nickname' in x.keys ()) \
             .map (lambda x: {
-                'current': current,
+                'current':        current,
                 'structure-type': title,
-                'code': x['child_record']['code'],
-                'name': x['child_record']['name'],
-                'nickname': x['child_record']['nickname']
+                'code':           x['code'],
+                'name':           x['name'],
+                'nickname':       x['nickname']
             }) \
             .to_list ()
 
@@ -40,7 +71,7 @@ def main ():
 
     courses_with_struct = None
 
-    if (dsc.has_generated (PROGRAM_NAME, 'courses-with-struct')):
+    if (dsc.has_generated (PROGRAM_NAME, 'courses-with-struct') and False):
         courses_with_struct = dsc.load_generated (PROGRAM_NAME, 'courses-with-struct')
         dbg.dinfo (F'Loaded from {dsc.get_generated_path (PROGRAM_NAME, "courses-with-struct")}')
 
