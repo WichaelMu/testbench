@@ -1,19 +1,20 @@
+import sys
 import json
+import logging
 import math
 import os
-from datetime import datetime
-from ulid import monotonic as ulid
+import pytz
 
 import logging
 
-logger = logging.getLogger ()
-logger.setLevel (logging.INFO)
+from datetime import datetime
+from ulid import monotonic as ulid
 
-import pytz
 aest = pytz.timezone ('Australia/Sydney')
 
 traces: list[dict] = []
 service_name = "Default Service Name"
+logger_instance = None
 
 # This is inaccurate. Run init_logger (...) for precision.
 start_time = datetime.now ().astimezone (aest)
@@ -42,7 +43,7 @@ def register_starting_time ():
     start_time = get_dt_now ()
     return start_time
 
-def delta_time (return_f32_deltatime = False):
+def delta_time (return_f32_deltatime = True):
     return str (get_dt_now () - start_time) if not return_f32_deltatime else (get_dt_now () - start_time).total_seconds ()
 
 def generate_ulid_invoke_time () -> str:
@@ -56,10 +57,37 @@ def set_service_name (svc_name):
     global service_name
     service_name = svc_name
 
-def init_logger (svc_name):
+def init_logger (svc_name, log_verbosity = logging.INFO, logging_overrides = {}):
     set_service_name (svc_name)
     start_time = register_starting_time ()
     universal_uniq_lexico_sortable_id = generate_ulid_invoke_time ()
+
+    default_log_settings = {
+        # Take full control over the default Lambda logging config?
+        'takeover': True,
+
+        # Otherwise, propagate our instance's settings?
+        'propagate': True,
+
+        # Modify root handlers as well?
+        'override-existing-config': False
+    }
+
+    merged_settings = default_log_settings | logging_overrides
+
+    global logger_instance
+    logger_instance = logging.getLogger (svc_name)
+    logger_instance.propagate = merged_settings['propagate']
+
+    logging.basicConfig (level = log_verbosity, force = merged_settings['takeover'])
+
+    if (merged_settings['override-existing-config']):
+        root = logging.getLogger ()
+        root.setLevel (log_verbosity)
+
+        if root.handlers:
+            for h in root.handlers:
+                h.setLevel (log_verbosity)
 
     return universal_uniq_lexico_sortable_id, start_time
 
@@ -72,8 +100,20 @@ def iso_8601 (when_datetime):
 def calculate_elapsed_time(start: datetime) -> int:
     return math.ceil((get_dt_now () - start).total_seconds())
 
-def log (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta = {}):
+def get_callsite (depth):
+    zeroed = depth - 1
+    if (zeroed < 1):
+        zeroed = 1
+
+    frame = sys._getframe (zeroed)
     return {
+        'source-file': os.path.basename (frame.f_code.co_filename),
+        'function': frame.f_code.co_name,
+        'line': frame.f_lineno
+    }
+
+def log (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta = {}):
+    log_entry = {
         'correlationId': correlationId,
         'referenceId':   referenceId,
         'svc':           service_name,
@@ -89,8 +129,44 @@ def log (correlationId, referenceId, message, status, tracepoint, source, target
         'meta':          meta
     }
 
-def print (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta = {}, verbosity = logging.INFO):
+    traces.append (log_entry)
+    return log_entry
+
+def print (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta = {}, verbosity = logging.INFO, callsite_depth = 3):
+    meta['callsite'] = get_callsite (callsite_depth)
+
     log_dict = log (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta)
     json_log = json.dumps (log_dict)
 
-    logging.log (verbosity, json_log)
+    if (logger_instance is None):
+        logging.log (verbosity, json_log)
+    else:
+        logger_instance.log (verbosity, json_log)
+
+def info (w):
+    verbosity = logging.INFO
+    if (logger_instance is None):
+        logging.log (verbosity, w)
+    else:
+        logger_instance.log (verbosity, w)
+
+def warning (w):
+    verbosity = logging.WARNING
+    if (logger_instance is None):
+        logging.log (verbosity, w)
+    else:
+        logger_instance.log (verbosity, w)
+
+def error (w):
+    verbosity = logging.ERROR
+    if (logger_instance is None):
+        logging.log (verbosity, w)
+    else:
+        logger_instance.log (verbosity, w)
+
+def exception (w):
+    verbosity = logging.FATAL
+    if (logger_instance is None):
+        logging.log (verbosity, w)
+    else:
+        logger_instance.log (verbosity, w)
