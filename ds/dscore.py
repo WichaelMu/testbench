@@ -68,6 +68,21 @@ def set_access_token ():
     global global_access_token
     global_access_token = token_data['access_token']
 
+def get_custom_auth (**kwargs):
+    payload = {
+        'grant_type': 'client_credentials',
+        'client_id': kwargs['client_id'],
+        'client_secret': kwargs['client_secret'],
+        'scope': kwargs['scope']
+    }
+
+    response = requests.post (kwargs['token_url'], data = payload)
+    response.raise_for_status ()
+    token_data = response.json ()
+
+    global global_access_token
+    global_access_token = token_data['access_token']
+
 def get_api_url ():
     return 'https://data.curriculum.nonprod.cortex.uts.edu.au' if not get_environment () else 'https://data.curriculum.cortex.uts.edu.au'
 
