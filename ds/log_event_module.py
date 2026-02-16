@@ -145,28 +145,36 @@ def print (correlationId, referenceId, message, status, tracepoint, source, targ
 
 def info (w):
     verbosity = logging.INFO
+    callsite = get_callsite (3)
+
     if (logger_instance is None):
         logging.log (verbosity, w)
     else:
-        logger_instance.log (verbosity, w)
+        logger_instance.log (verbosity, F'{callsite["function"]}:{callsite["line"]} - {w}')
 
 def warning (w):
     verbosity = logging.WARNING
+    callsite = get_callsite (3)
+
     if (logger_instance is None):
         logging.log (verbosity, w)
     else:
-        logger_instance.log (verbosity, w)
+        logger_instance.log (verbosity, F'{callsite["function"]}:{callsite["line"]} - {w}')
 
 def error (w):
     verbosity = logging.ERROR
+    callsite = get_callsite (3)
+
     if (logger_instance is None):
         logging.log (verbosity, w)
     else:
-        logger_instance.log (verbosity, w)
+        logger_instance.log (verbosity, F'{callsite["function"]}:{callsite["line"]} - {w}')
 
 def exception (w):
     verbosity = logging.FATAL
+    callsite = get_callsite (3)
+
     if (logger_instance is None):
         logging.log (verbosity, w)
     else:
-        logger_instance.log (verbosity, w)
+        logger_instance.log (verbosity, F'{callsite["function"]}:{callsite["line"]} - {w}')
