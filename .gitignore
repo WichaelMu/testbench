@@ -170,3 +170,5 @@ mcrypt/mcrypt
 **/*.xlsx
 **/*.csv
 **secrets**
+**generated/**
+**/generated/**
