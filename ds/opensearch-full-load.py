@@ -34,6 +34,7 @@ from requests_oauth2client import ApiClient
 
 import dscore as dsc
 import log_event_module as lem
+from functional import pseq
 
 ITEM_LIMIT = int (os.environ.get ('ITEM_LIMIT', 64))
 
@@ -109,8 +110,8 @@ def matches_substructure_code_format (dict):
 def bulk_download (api, entity_name, page = 1, limit = ITEM_LIMIT):
     try:
         # &sort=sys_created_on,sys_id
-        lem.info (f"sending request=/{entity_name}?page={page}&limit={limit}")
-        response = api.get (f"/{entity_name}?page={page}&limit={limit}")
+        lem.info (f"sending request=/{entity_name}?page={page}&limit={limit}&sort=sys_created_on,sys_id")
+        response = api.get (f"/{entity_name}?page={page}&limit={limit}&sort=sys_created_on,sys_id")
         lem.info (f"response={response}")
         
         response = orjson.loads (response.text)
@@ -122,16 +123,21 @@ def bulk_download (api, entity_name, page = 1, limit = ITEM_LIMIT):
 
     cleansed_response = []
 
-    match entity_name:
-        case 'courses':
-            cleansed_response = list (filter (matches_course_code_format, response['data']))
-        case 'subjects':
-            cleansed_response = list (filter (matches_subject_code_format, response['data']))
-        case 'areas_of_study':
-            cleansed_response = list (filter (matches_substructure_code_format, response['data']))
-        case _:
-            lem.warning (f'entity type of {entity_name} is unsupported; returning unfiltered results')
-            cleansed_response = response['data']
+    try:
+        match entity_name:
+            case 'courses':
+                cleansed_response = list (filter (matches_course_code_format, response['data']))
+            case 'subjects':
+                cleansed_response = list (filter (matches_subject_code_format, response['data']))
+            case 'areas_of_study':
+                cleansed_response = list (filter (matches_substructure_code_format, response['data']))
+            case _:
+                lem.warning (f'entity type of {entity_name} is unsupported; returning unfiltered results')
+                cleansed_response = response['data']
+
+    except Exception as e:
+        lem.error (F"encountered during filtering. error: {x}")
+        lem.error (F"attempting to skip and continue processing...")
 
     return (response['meta']['hasNext'], cleansed_response)
 
@@ -272,13 +278,13 @@ def tokenise_event (item, entity_name):
     if try_get_value (item, 'description') is not None:
         description = item['description']
         lem.info (f'code={item["code"]}: added description embeddings')
-        # description_vector = text_to_embeddings_via_bedrock (text = description)
+        description_vector = text_to_embeddings_via_bedrock (text = description)
 
-        # match description_vector:
-        #     case list ():
-        #         item['description_vector'] = description_vector
-        #     case None:
-        #         lem.warning (f'code={item["code"]} shall lamentably be bereft of any description')
+        match description_vector:
+            case list ():
+                item['description_vector'] = description_vector
+            case None:
+                lem.warning (f'code={item["code"]} shall lamentably be bereft of any description')
 
     else:
         lem.warning (f'code={item["code"]} is lamentably bereft of any description; skipping')
@@ -286,54 +292,54 @@ def tokenise_event (item, entity_name):
     # Courses only
     if try_get_value (item, 'career_opportunities') is not None:
         lem.info (f'code={item["code"]}: added career_opportunities embeddings')
-        # career_vector = text_to_embeddings_via_bedrock (text = item['career_opportunities'])
+        career_vector = text_to_embeddings_via_bedrock (text = item['career_opportunities'])
 
-        # match career_vector:
-        #     case list ():
-        #         item['career_vector'] = career_vector
-        #     case None:
-        #         lem.warning (f'academic item code={item["code"]} shall have bleak career opportunities')
+        match career_vector:
+            case list ():
+                item['career_vector'] = career_vector
+            case None:
+                lem.warning (f'academic item code={item["code"]} shall have bleak career opportunities')
 
     # Courses only
     if try_get_value (item, 'course_learning_outcome') is not None:
         if len (item.get ('course_learning_outcome')) > 0:
             lem.info (f'code={item["code"]}: added course_learning_outcome embeddings')
-        #     outcomes_vector = text_to_embeddings_via_bedrock (
-        #         text = join_learning_outcomes (dict = item, top_outcome_element = 'course_learning_outcome'))
+            outcomes_vector = text_to_embeddings_via_bedrock (
+                text = join_learning_outcomes (dict = item, top_outcome_element = 'course_learning_outcome'))
 
-        #     match outcomes_vector:
-        #         case list ():
-        #             item['outcomes_vector'] = outcomes_vector
-        #         case None:
-        #           lem.warning (f'course code={item["code"]} shall regrettably be devoid of any delineated learning outcomes')
+            match outcomes_vector:
+                case list ():
+                    item['outcomes_vector'] = outcomes_vector
+                case None:
+                  lem.warning (f'course code={item["code"]} shall regrettably be devoid of any delineated learning outcomes')
 
     # Subjects only
     if try_get_value (item, 'subject_learning_outcome') is not None:
         if len (item.get ('subject_learning_outcome')) > 0:
             lem.info (f'code={item["code"]}: added subject_learning_outcome embeddings')
 
-        #     subject_learning_outcomes_embeddings = text_to_embeddings_via_bedrock (
-        #         text = join_learning_outcomes (dict = item, top_outcome_element = 'subject_learning_outcome'))
+            subject_learning_outcomes_embeddings = text_to_embeddings_via_bedrock (
+                text = join_learning_outcomes (dict = item, top_outcome_element = 'subject_learning_outcome'))
 
-        #     match subject_learning_outcomes_embeddings:
-        #         case list ():
-        #             item['outcomes_vector'] = subject_learning_outcomes_embeddings
-        #         case _:
-        #           lem.warning (f'subject code={item["code"]}: shall regrettably be devoid of any delineated learning outcomes')
+            match subject_learning_outcomes_embeddings:
+                case list ():
+                    item['outcomes_vector'] = subject_learning_outcomes_embeddings
+                case _:
+                  lem.warning (f'subject code={item["code"]}: shall regrettably be devoid of any delineated learning outcomes')
 
     # Subjects only
     if try_get_value (item, 'learning_approach') is not None:
         if len (item.get ('learning_approach')) > 0:
             lem.info (f'code={item["code"]}: added learning_approach embeddings')
 
-        #     learning_approach_embeddings = text_to_embeddings_via_bedrock (
-        #         text = item['learning_approach'])
+            learning_approach_embeddings = text_to_embeddings_via_bedrock (
+                text = item['learning_approach'])
 
-        #     match learning_approach_embeddings:
-        #         case list ():
-        #             item['approach_vector'] = learning_approach_embeddings
-        #         case _:
-        #           lem.warning (f'subject code={item["code"]}: shall regrettably be devoid of any meaningful learning approach')
+            match learning_approach_embeddings:
+                case list ():
+                    item['approach_vector'] = learning_approach_embeddings
+                case _:
+                  lem.warning (f'subject code={item["code"]}: shall regrettably be devoid of any meaningful learning approach')
 
     try:
         orjson.dumps (item)
@@ -442,7 +448,6 @@ async def event_dispatcher (events, entity_name, headers):
 
 def purge_index (entity_name):
     lem.info (f'purging the {entity_name} index')
-
     opensearch_client = ApiClient (f'https://{os.environ[get_os_endpoint_url_envar_name ()]}')
 
     opensearch_client.post (f'/{entity_name}/_delete_by_query',
@@ -528,6 +533,7 @@ def lambda_handler (event, context):
 
                 # lem.info (f'gathered {len (future_events)} events')
 
+                # total_event_count += len (future_events)
                 total_event_count += len (events)
                 receiver += events
 
@@ -557,8 +563,12 @@ def lambda_handler (event, context):
 
 if (__name__ == '__main__'):
     correlation_id, start_time = lem.init_logger ('opensearch-full-load')
-    lambda_handler ({}, {})
 
-    dsc.save_generated (PROGRAM_NAME, 'unprocessable-courses', not_processable_courses)
-    dsc.save_generated (PROGRAM_NAME, 'unprocessable-subjects', not_processable_subjects)
-    dsc.save_generated (PROGRAM_NAME, 'unprocessable-substructures', not_processable_substructures)
+    # envars = dsc.load_json ('secrets.json')['OPENSEARCH']['NONPROD']
+    # os.environ.update (envars)
+
+    # lambda_handler ({}, {})
+
+    # dsc.save_generated (PROGRAM_NAME, 'unprocessable-courses', not_processable_courses)
+    # dsc.save_generated (PROGRAM_NAME, 'unprocessable-subjects', not_processable_subjects)
+    # dsc.save_generated (PROGRAM_NAME, 'unprocessable-substructures', not_processable_substructures)
