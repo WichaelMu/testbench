@@ -1,0 +1,373 @@
+source:
+  input:
+
+callouts:
+
+locals:
+  env:
+    eval:
+      f"{envar ('ENV')}"
+
+target:
+  output:
+    meta:
+      "@last_seen_at":
+        eval:
+          f"{iso8601 ()}"
+
+      event:
+        id: source.meta.kafka_key
+        source: source.meta.kafka_topic
+        type: source.input.type
+        time: source.input.time
+
+      system:
+        action:
+          eval:
+            F'{lower (source.input.data.ACTION)}'
+        id: source.input.id
+        sequence_no: source.input.aueduutsstudentsciasequencenumber
+        sequence_no: source.input.data.SSP_STTS_NO
+        userid: source.input.aueduutsstudentsciauserid
+        function: source.input.aueduutsstudentsciafunction
+        status: source.input.aueduutsstudentsciastatus
+        subscriber_id: source.input.aueduutsstudentsciasubscriberid
+        status_code: source.input.aueduutsstudentsciastatuscode
+
+        user: source.input.data.CAUSED_BY_USER
+        function: source.input.data.CAUSED_BY_FUNCTION
+
+      student_study_package:
+        student_id: source.input.aueduutsstudentsciastudentid
+        version: source.input.aueduutsstudentsciaspkversion
+        attempt: source.input.aueduutsstudentsciasspattempt
+        number: source.input.aueduutsstudentsciasspno
+
+      study_package:
+        code: source.input.aueduutsstudentsciaspkcode
+        number: source.input.aueduutsstudentsciaspkno
+
+    data:
+      student_study_package:
+        student_id: source.input.data.STU_ID
+        student_study_package_number: source.input.data.SSP_NO
+        study_package_number: source.input.data.SPK_NO
+        version: source.input.data.SPK_VER_NO
+        attempt: source.input.data.SSP_ATT_NO
+
+      study_measure:
+        study_measure:
+          value: source.input.data.CR_VAL
+          code: source.input.data.DFLT_STUDY_MEASURE_CD
+
+        variation_flag: source.input.data.VAR_IND
+      
+      parent_student_study_package:
+        study_package_number: source.input.data.PARENT_SPK_NO
+        version: source.input.data.PARENT_SPK_VER_NO
+        attempt: source.input.data.PARENT_SSP_ATT_NO
+        student_study_package_number: source.input.data.PARENT_SSP_NO
+        study_package_code: source.input.data.PARENT_SPK_CD
+        study_package_number: source.input.data.STRUCT_SPK_NO
+        version: source.input.data.STRUCT_SPK_VER_NO
+        availability_key_number: source.input.data.PARENT_AVAIL_KEY
+
+      sspstage:
+        code: source.input.data.SSP_STG_CD
+        value: source.input.data.SSP_STG_DESC
+        sequence: source.input.data.SSP_STG_SEQ
+
+        category:
+          code: source.input.data.SSP_STG_CAT_CD
+          value: source.input.data.SSP_STG_CAT_DESC
+
+      result_details:
+        current_status:
+          code: source.input.data.RSLT_CURR_STAT_CD
+          value: source.input.data.RSLT_CURR_STAT_DESC
+
+        result_status:
+          code: source.input.data.RSLT_STTS_CD
+          value: source.input.data.RSLT_STTS_DESC
+
+        grade:
+          code: source.input.data.RSLT_GRD_CD
+          value: source.input.data.RSLT_GRD_DESC
+
+          code: source.input.data.GRADE_CD
+
+        result_value: source.input.data.RSLT_VAL
+        total_grade_points: source.input.data.TOT_GP
+        gpa: source.input.data.STU_GPA
+        scu_completed: source.input.data.SCU_COMPLETED
+        scu_current: source.input.data.SCU_CURRENT
+        ratified_flag: source.input.data.RATIFIED_FG
+
+        certified_flag: source.input.data.CERTIFIED_FG
+        certified_date: source.input.data.CERTIFIED_DT
+        effective_date: source.input.data.RSLT_EFFCT_DT
+
+        result_type:
+          code: source.input.data.RSLT_TYPE_CD
+
+        grade_type:
+          code: source.input.data.GRADE_TYPE_CD
+          value: source.input.data.GRADE_TYPE_DESC
+
+        pass_fail_code:
+          code: source.input.data.PASS_FAIL_CD
+          value: source.input.data.PASS_FAIL_DESC
+
+        mark: source.input.data.MARK
+
+      academic_status:
+        code: source.input.data.AC_STTS_CD
+        value: source.input.data.AC_STTS_DESC
+
+      status_flags:
+        not_satisfied_requisite_criteria_flag: source.input.data.REQST_EXISTS
+
+        requisite_waiver_flag: source.input.data.REQST_WVR_FG
+
+        honours_flag: source.input.data.HONS_FG
+        not_for_assessment_flag: source.input.data.NOT_ASSD_FG
+
+        not_on_study_plan_flag: source.input.data.NOT_ON_PLAN_FG
+
+        alternate_chosen_flag: source.input.data.ALT_CHOSEN_FG
+
+        structured_study_package_flag: source.input.data.STRUCTURE_FG
+
+      classification_details:
+        field_of_education:
+          code: source.input.data.FOE_CD
+          value: source.input.data.FOE_DESC
+
+        foe_type:
+          code: source.input.data.FOE_TYPE_CD
+          value: source.input.data.FOE_TYPE_DESC
+
+        specialisation:
+          code: source.input.data.SCHLTN_CD
+          value: source.input.data.SCHLTN_DESC
+
+        classification:
+          code: source.input.data.CLASS_CD
+          value: source.input.data.CLASS_DESC
+
+        campus_cluster:
+          code: source.input.data.CAMPUS_CLUSTER_CD
+          value: source.input.data.CAMPUS_CLUSTER_DESC
+
+        field_of_study:
+          code: source.input.data.FOS_CD
+          value: source.input.data.FOS_DESC
+
+        field_of_research:
+          code: source.input.data.FLD_RESCH_CD
+          value: source.input.data.FLD_RESCH_DESC
+
+        socio_economic_code:
+          code: source.input.data.SOCIO_EC_CD
+          value: source.input.data.SOCIO_EC_DESC
+
+      organisational_units:
+        teaching_org_unit:
+          code: source.input.data.TEACH_ORG_CD
+          value: source.input.data.TEACH_ORG_DESC
+
+        awarding_org_unit:
+          code: source.input.data.AWARD_ORG_CD
+          value: source.input.data.AWARD_ORG_DESC
+
+      locations:
+        teaching_location:
+          code: source.input.data.TEACH_LOC_CD
+          value: source.input.data.TEACH_LOC_DESC
+        
+        attendance_location:
+          code: source.input.data.ATT_LOC_CD
+          value: source.input.data.ATT_LOC_DESC
+
+        exam_location:
+          code: source.input.data.EXM_LOC_CD
+          value: source.input.data.EXM_LOC_DESC
+
+        code: source.input.data.LOCATION_CD
+        value: source.input.data.LOCATION_DESC
+
+      delivery_mode:
+        code: source.input.data.DELIV_MODE_CD
+        value: source.input.data.DELIV_MODE_DESC
+
+      delivery_language:
+        code: source.input.data.DELIV_LANG_CD
+        value: source.input.data.DELIV_LANG_DESC
+
+      charging_scheme:
+        study_package_charging_scheme_type:
+          code: source.input.data.SPK_CHARG_SCH_TYPE_CD
+          value: source.input.data.SPK_CHARG_SCH_TYPE_DESC
+
+        charging_scheme:
+          code: source.input.data.CHARG_SCH_CD
+          value: source.input.data.CHARG_SCH_DESC
+          version: source.input.data.CHARG_SCH_VER_NO
+      
+      availability_details:
+        availability_info:
+          availability_number: source.input.data.AVAIL_NO
+          year: source.input.data.AVAIL_YR
+          
+          availability_type:
+            code: source.input.data.AVAIL_TYP_CD
+            value: source.input.data.AVAIL_TYP_DESC
+
+          study_period:
+            code: source.input.data.SPRD_CD
+            value: source.input.data.SPRD_DESC
+
+          availability_key_number: source.input.data.AVAIL_KEY_NO
+
+          liability_category:
+            code: source.input.data.LIAB_CAT_CD
+            value: source.input.data.LIAB_CAT_DESC
+
+          load_category:
+            code: source.input.data.LOAD_CAT_CD
+            value: source.input.data.LOAD_CAT_DESC
+
+          attendance_mode:
+            code: source.input.data.ATTNDC_MODE_CD
+            value: source.input.data.ATTNDC_MODE_DESC
+
+          study_mode:
+            code: source.input.data.STUDY_MODE_CD
+            value: source.input.data.STUDY_MODE_DESC
+
+        study_type:
+          code: source.input.data.STUDY_TYPE_CD
+          value: source.input.data.STUDY_TYPE_DESC
+
+        study_basis:
+          code: source.input.data.STUDY_BASIS_CD
+          value: source.input.data.STUDY_BASIS_DESC
+
+      study_level:
+        code: source.input.data.STUDY_LEVEL_CD
+        value: source.input.data.STUDY_LEVEL_DESC
+
+      titles:
+        short_title: source.input.data.SHORT_TITLE
+        long_title: source.input.data.LONG_TITLE
+
+      parent_availability:
+        availability_number: source.input.data.PARENT_AVAIL_NO
+        study_package_code: source.input.data.SPK_CD
+
+        location:
+          code: source.input.data.PARENT_LOCATION_CD
+          value: source.input.data.PARENT_LOCATION_DESC
+
+        year: source.input.data.PARENT_AVAIL_YR
+
+        study_period:
+          code: source.input.data.PARENT_SPRD_CD
+          value: source.input.data.PARENT_SPRD_DESC
+
+      structure_student_study_package:
+        student_study_package_number: source.input.data.STRUCT_FROM_SSP_NO
+        study_package_code: source.input.data.STRUCT_SPK_CD
+
+      study_package_category_type:
+        code: source.input.data.SPK_CAT_TYPE_CD
+        value: source.input.data.SPK_CAT_TYPE_DESC
+
+      study_package_category:
+        value: source.input.data.SPK_CAT_DESC
+        code: source.input.data.SPK_CAT_CD
+
+      student_status_details:
+        modified_date: source.input.data.STU_STTS_MOD_DATE
+        auto_assign_flag: source.input.data.STU_STTS_ASSIGN_FG
+
+        student_status_code:
+          code: source.input.data.STU_STTS_CD
+
+      government_reporting:
+        government_reported_indicator:
+          code: source.input.data.GOVT_REPORT_IND
+          value: source.input.data.GOVT_REPORT_VAL
+
+        remitted_flag: source.input.data.RMTD_IND
+
+      ssp_status:
+        code: source.input.data.SSP_STTS_CD
+        value: source.input.data.SSP_STTS_DESC
+
+      sspstatus_effective_date: source.input.data.EFFCT_START_DT
+
+      plan_component_type:
+        code: source.input.data.PLAN_COMPNT_CD
+        value: source.input.data.PLAN_COMPNT_DESC
+
+      special_consideration_details:
+        special_consideration_request_flag: source.input.data.SCREQ_FG
+
+      consolidated_flag: source.input.data.STU_CONSOL_FG
+
+      time_based_details:
+        current_enrolment_period:
+          subsumed_into_time_based_component_flag: source.input.data.HAS_BEEN_SUBS_FG
+          ep_year: source.input.data.CUR_EP_YEAR
+          ep_no: source.input.data.CUR_EP_NO
+
+          location:
+            code: source.input.data.CUR_LOCATION_CD
+            value: source.input.data.CUR_EP_LOC
+
+        time_based_result_effective_date: source.input.data.TB_RSLT_EFFCT_DT
+        expected_work_submission_date: source.input.data.LATEST_EWS_DT
+
+      fecliability_category:
+        code: source.input.data.FEC_LIAB_CAT_CD
+        value: source.input.data.FEC_LIAB_CAT_DESC
+
+      census_date: source.input.data.CENSUS_DT
+
+      availability_start_date: source.input.data.AVAIL_START_DT
+      availability_end_date: source.input.data.AVAIL_END_DT
+
+      erase!:
+        - datacontenttype
+        - source
+        - specversion
+        - kafka_key
+        - data/ACTION
+        - data/CAUSED_BY_FUNCTION
+        - data/CRDATE
+        - data/CRTIME
+        - data/LAST_MOD_DATE
+        - data/LAST_MOD_TIME
+
+sinks:
+#   stdout:
+#     # parallel: true
+#     output:
+
+  streaming:
+    parallel: true
+    cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
+    cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
+    topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
+
+  opensearch:
+    parallel: true
+    endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
+    index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
+    document_id: f"{locals.student_student_id}"
+    iam:
+      region: f"{envar ('IAM_REGION')}"
+      service: f"{envar ('IAM_SERVICE_NAME')}"
+
+# yield: sinks.stdout.output

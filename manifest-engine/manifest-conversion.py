@@ -7,7 +7,7 @@ import py_log_event_module as lem
 import dscore as dsc
 
 def load_event ():
-    return dsc.load_json ('events/student.user.event.json')
+    return dsc.load_json ('event.json')
 
 def open_yaml (manifest_file_path):
     with open (manifest_file_path) as manifest:
@@ -24,7 +24,7 @@ def main ():
         'correlation_id': correlation_id
     }
 
-    manifest = open_yaml ('student.user.yaml')
+    manifest = open_yaml ('student.stu.ssp.compntssp.create.yaml')
 
     source = {
         'source': {

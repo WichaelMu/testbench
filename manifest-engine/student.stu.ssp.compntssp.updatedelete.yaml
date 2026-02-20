@@ -1,0 +1,94 @@
+source:
+  input:
+
+callouts:
+
+locals:
+  env:
+    eval:
+      f"{envar ('ENV')}"
+
+  student_student_id: source.input.aueduutsstudentsciastudentid
+  student_ssp_code: source.input.aueduutsstudentsciasspcode
+  student_ssp_version: source.input.aueduutsstudentsciasspversion
+  student_attempt: source.input.aueduutsstudentsciasspattempt
+
+  data1:
+    government_reporting:
+      gv1_parent_student_study_package: source.input.data.student_study_package_event.government_reporting.gv1_parent_student_study_package_identity
+
+target:
+  output:
+    meta:
+      "@last_seen_at":
+        eval:
+          f"{iso8601 ()}"
+
+      event:
+        id: source.meta.kafka_key
+        source: source.meta.kafka_topic
+        type: source.input.type
+        time: source.input.time
+
+      system:
+        action:
+          eval:
+            F'{lower (source.input.data.student_study_package_event.action)}'
+        id: source.input.id
+        sequence_no: source.input.aueduutsstudentsciasequencenumber
+        userid: source.input.aueduutsstudentsciauserid
+        function: source.input.aueduutsstudentsciafunction
+        status: source.input.aueduutsstudentsciastatus
+        subscriber_id: source.input.aueduutsstudentsciasubscriberid
+        status_code: source.input.aueduutsstudentsciastatuscode
+
+      student:
+        student_id: locals.student_student_id
+        ssp_code: locals.student_ssp_code
+        ssp_version: locals.student_ssp_version
+        ssp_attempt: locals.student_ssp_attempt
+
+    data:
+      student_study_package: source.input.data.student_study_package_event.student_study_package_identity
+      parent_student_study_package: source.input.data.student_study_package_event.parent_student_study_package_identity
+      parent_availability: source.input.data.student_study_package_event.parent_availability_identity
+      structure_student_study_package: source.input.data.student_study_package_event.structure_student_study_package_identity
+      completed_in_student_study_package: source.input.data.student_study_package_event.completed_in_student_study_package_identity
+
+      fecliability_category:
+        code: source.input.data.student_study_package_event.time_based_details.fecliability_category.code
+        value: source.input.data.student_study_package_event.time_based_details.fecliability_category.value
+
+      merge!:
+        - source.input.data.student_study_package_event
+        - locals.data1
+
+      erase!:
+        - data.action
+        - data.student_study_package_event
+        - data.student_study_package_identity
+        - data.parent_student_study_package_identity
+        - data.parent_availability_identity
+        - data.government_reporting.gv1_parent_student_study_package_identity
+
+sinks:
+#   stdout:
+#     # parallel: true
+#     output:
+
+#   streaming:
+#     parallel: true
+#     cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
+#     cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
+#     topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
+
+  opensearch:
+    parallel: true
+    endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
+    index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
+    document_id: f"{locals.student_student_id}"
+    iam:
+      region: f"{envar ('IAM_REGION')}"
+      service: f"{envar ('IAM_SERVICE_NAME')}"
+
+# yield: sinks.stdout.output
