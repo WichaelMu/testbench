@@ -3,9 +3,72 @@ import boto3
 
 from functional import pseq, seq
 
+import py_msk_serverless_data_streaming_client as kem
+from typing import Dict
+
+from kafka import TopicPartition
+from kafka.structs import OffsetAndMetadata
+from kafka import KafkaConsumer
+
 import dscore as dsc
 
 PROGRAM_NAME = 'lambda-trigger-laziness'
+def reset_offsets_to_earliest (
+    streaming_cluster_endpoint: str,
+    streaming_cluster_region: str,
+    topic: str,
+    consumer_group: str,
+    function_name: str,
+) -> Dict[int, int]:
+    print (streaming_cluster_endpoint)
+    consumer = kem.create_streaming_consumer (streaming_cluster_endpoint, streaming_cluster_region, topic, consumer_group)
+
+    try:
+        partitions = consumer.partitions_for_topic (topic)
+
+        if (partitions is None) or (len (partitions) == 0):
+            raise ValueError (f'no partitions found for topic {topic!r}')
+
+        topic_partitions = [
+            TopicPartition (topic, partition_id) for partition_id in sorted (partitions)
+        ]
+
+        earliest_offsets = consumer.beginning_offsets (topic_partitions)
+
+        commit_map = {
+            tp: OffsetAndMetadata (earliest_offsets[tp], None) for tp in topic_partitions
+        }
+
+        consumer.assign (topic_partitions)
+        consumer.commit (offsets = commit_map)
+
+        return {
+            tp.partition: earliest_offsets[tp] for tp in topic_partitions
+        }
+
+    finally:
+        consumer.close ()
+
+def reset_associated_offsets (source_mapping_details, ingestor_functions_lookup):
+    print (source_mapping_details)
+
+    for smd in source_mapping_details:
+        function_arn = smd['FunctionArn']
+        function_envars = pseq (ingestor_functions_lookup) \
+            .filter (lambda f: f['FunctionArn'] == function_arn) \
+            .map (lambda f: f['Environment']['Variables']) \
+            .to_list ()[0]
+
+        streaming_cluster_endpoint = function_envars['STREAMING_CLUSTER_ENDPOINT']
+        streaming_cluster_region   = function_envars['STREAMING_CLUSTER_REGION']
+        topic                      = smd['Topics'][0]
+        consumer_group             = smd['AmazonManagedKafkaEventSourceConfig']['ConsumerGroupId']
+        function_name              = function_name_from_arn (smd['FunctionArn'])
+
+        result = reset_offsets_to_earliest (streaming_cluster_endpoint, streaming_cluster_region, topic, consumer_group, function_name)
+        print (result)
+
+    pass
 
 def get_lambda_client ():
     lambda_client = boto3.client ('lambda')
@@ -24,8 +87,9 @@ def list_functions (lambda_client):
 
     return lambda_functions
 
-def filter_function_names (lambda_functions, prefix, suffix):
+def filter_function_names (lambda_functions, prefix, suffix, contains):
     return pseq (lambda_functions) \
+        .filter (lambda f: contains in f['FunctionName']) \
         .filter (lambda f: f['FunctionName'].startswith (prefix)) \
         .filter (lambda f: f['FunctionName'].endswith (suffix)) \
         .to_list ()
@@ -60,11 +124,14 @@ def get_event_source_mappings (lambda_client, event_source_mappings):
 
     return event_source_mapping_responses
 
+def function_name_from_arn (arn):
+    return arn.split(':')[-1]
+
 def update_event_source_mappings (lambda_client, event_source_mappings, should_enable):
     update_response = seq (event_source_mappings) \
         .map (lambda esm: lambda_client.update_event_source_mapping (
             UUID = esm['UUID'],
-            FunctionName = esm['FunctionArn'].split(':')[-1],
+            FunctionName = function_name_from_arn (esm['FunctionArn']),
             Enabled = should_enable
         )) \
         .to_list ()
@@ -81,17 +148,42 @@ def main (argv):
     else:
         lambda_functions = dsc.load_generated (PROGRAM_NAME, 'lambda-functions')
 
-    ingestor_functions = filter_function_names (lambda_functions, argv[KPREFIX], argv[KSUFFIX])
-    event_source_mappings = list_event_source_mappings (lambda_client, ingestor_functions)
-    source_mapping_details = get_event_source_mappings (lambda_client, event_source_mappings)
+    request_key_cache = F'ingestor-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
+    event_source_map_key_cache = F'event-source-mappings-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
+    event_source_details_key_cache = F'event-source-details-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
 
-    updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE])
-    print (updated_event_source_mappings)
+    if (not dsc.has_generated (PROGRAM_NAME, request_key_cache)):
+        ingestor_functions = filter_function_names (lambda_functions, argv[KPREFIX], argv[KSUFFIX], argv[KCONTAINS])
+        dsc.save_generated (PROGRAM_NAME, request_key_cache, ingestor_functions)
+
+    else:
+        ingestor_functions = dsc.load_generated (PROGRAM_NAME, request_key_cache)
+
+    if (not dsc.has_generated (PROGRAM_NAME, event_source_map_key_cache)):
+        event_source_mappings = list_event_source_mappings (lambda_client, ingestor_functions)
+        dsc.save_generated (PROGRAM_NAME, event_source_map_key_cache, event_source_mappings)
+
+    else:
+        event_source_mappings = dsc.load_generated (PROGRAM_NAME, event_source_map_key_cache)
+
+    if (not dsc.has_generated (PROGRAM_NAME, event_source_details_key_cache)):
+        source_mapping_details = get_event_source_mappings (lambda_client, event_source_mappings)
+        dsc.save_generated (PROGRAM_NAME, event_source_details_key_cache, event_source_mappings)
+
+    else:
+        source_mapping_details = dsc.load_generated (PROGRAM_NAME, event_source_details_key_cache)
+
+    if (argv[KREWIND_ONLY]):
+        reset_associated_offsets (source_mapping_details, ingestor_functions)
+
+    else:
+        updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE])
 
 KENABLE = 'enable'
 KPREFIX = 'prefix'
 KSUFFIX = 'suffix'
 KCONTAINS = 'contains'
+KREWIND_ONLY = 'rewind-only'
 
 def parse_argv ():
     argv = sys.argv[1:]
@@ -129,6 +221,19 @@ def parse_argv ():
 
                 return { KCONTAINS: argv[iterator] }, iterator
 
+            case '--rewind-only':
+                iterator += 1
+
+                if (argv[iterator].lower () == 'yes' or argv[iterator].lower () == 'true'):
+                    result = True
+                elif (argv[iterator].lower () == 'no' or argv[iterator].lower () == 'false'):
+                    result = False
+                else:
+                    print ('--rewind-only must be [ yes | no | true | false ]')
+                    sys.exit (1)
+
+                return { KREWIND_ONLY: argv[iterator] }, iterator
+
             case '?' | '--help' | 'help' | '__HELP__':
                 print ('--enable true | false --prefix PREFIX --suffix SUFFIX')
                 sys.exit (0)
@@ -140,7 +245,8 @@ def parse_argv ():
     options = {
         KPREFIX: '',
         KSUFFIX: '',
-        KCONTAINS: ''
+        KCONTAINS: '',
+        KREWIND_ONLY: False
     }
 
     iterator = 0
