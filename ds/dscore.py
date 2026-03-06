@@ -185,7 +185,7 @@ def ensure_generated (program_name):
 
 def write_json (path, data):
     with open (path, 'w') as w:
-        json.dump (data, w)
+        json.dump (data, w, default = str)
 
 def load_json (path):
     with open (path) as f:
