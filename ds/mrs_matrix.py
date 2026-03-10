@@ -2,7 +2,8 @@ import master_record_status_matrix as matrix
 
 event = {
     'queryStringParameters': {
-        'status': 'draft,offered'
+        'status': 'draft',
+        # 'revision_status': 'draft,archived,hello'
     }
 }
 
