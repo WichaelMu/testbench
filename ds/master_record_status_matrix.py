@@ -12,7 +12,7 @@ default_matrix = {
 }
 
 status_value_filter_mapping = {
-    'offered'       : 'asdf',
+    'offered'       : 'active',
     'draft'         : 'draft',
     'scheduled'     : 'active', # Unused. Default to active.
     'teachout'      : 'active',
@@ -38,7 +38,27 @@ def evaluate_master_record_status_compatibility (in_requested_statuses):
     # dbg.dcrit (response_builder)
     return response_builder
 
-def solve (apicom, event, default_status = 'offered', valid_statuses = { 'offered', 'draft', 'scheduled', 'teachout', 'onhold', 'disestablished' }, valid_revisions = { 'active', 'draft', 'archived' }, default_revision_status = 'active', factor_status = True, factor_mrs = True):
+def build_should_query (status_query, revision_query):
+    import itertools
+    cartesian_product = list (itertools.product (status_query, revision_query))
+
+    fstringed = list (
+        map (lambda f: {
+            'bool': {
+                'filter': f
+            }
+        }, cartesian_product if len (cartesian_product) > 0
+             else status_query if len (status_query) > 0
+             else revision_query
+        )
+    )
+
+    return fstringed
+
+VALID_STATUSES  = { 'offered', 'draft', 'scheduled', 'teachout', 'onhold', 'disestablished' }
+VALID_REVISIONS = { 'active', 'draft', 'archived' }
+
+def solve (apicom, event, default_status = 'offered', valid_statuses = VALID_STATUSES, valid_revisions = VALID_REVISIONS, default_revision_status = 'active', factor_status = True, factor_mrs = True):
     requested_master_record_status = apicom.get_param (event, 'status', default = default_status)
     requested_revision_status      = apicom.get_param (event, 'revision_status', default = default_revision_status)
 
@@ -66,24 +86,15 @@ def solve (apicom, event, default_status = 'offered', valid_statuses = { 'offere
         map (lambda m: { 'match': { 'master_record_status.value': m } },
              filter (lambda m: m in valid_statuses, master_record_status_split)
         )
-    )
+    ) if factor_mrs else []
 
     revision_query = list (
         map (lambda r: { 'match': { 'status.value': r } },
              filter (lambda r: r in valid_revisions, revision_status_split)
         )
-    )
+    ) if factor_status else []
 
-    import itertools
-    cartesian_product = itertools.product (status_query, revision_query)
-
-    fstringed = list (
-        map (lambda f: {
-            'bool': {
-                'filter': f
-            }
-        }, cartesian_product)
-    )
+    fstringed = build_should_query (status_query, revision_query)
 
     should_query = {
         'should': fstringed,
