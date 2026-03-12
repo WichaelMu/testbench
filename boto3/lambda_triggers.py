@@ -58,8 +58,7 @@ def reset_offsets_to_earliest (
         consumer.close ()
 
 def reset_associated_offsets (source_mapping_details, ingestor_functions_lookup):
-    print (source_mapping_details)
-
+    result = {}
     for smd in source_mapping_details:
         function_arn = smd['FunctionArn']
         function_envars = pseq (ingestor_functions_lookup) \
@@ -73,10 +72,9 @@ def reset_associated_offsets (source_mapping_details, ingestor_functions_lookup)
         consumer_group             = smd['AmazonManagedKafkaEventSourceConfig']['ConsumerGroupId']
         function_name              = function_name_from_arn (smd['FunctionArn'])
 
-        result = reset_offsets_to_earliest (streaming_cluster_endpoint, streaming_cluster_region, topic, consumer_group, function_name)
-        print (result)
+        result |= { function_name_from_arn (smd['FunctionArn']): reset_offsets_to_earliest (streaming_cluster_endpoint, streaming_cluster_region, topic, consumer_group, function_name) }
 
-    pass
+    return { 'reset': result }
 
 def get_lambda_client ():
     lambda_client = boto3.client ('lambda')
