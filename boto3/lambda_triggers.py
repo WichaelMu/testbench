@@ -20,8 +20,15 @@ def reset_offsets_to_earliest (
     consumer_group: str,
     function_name: str,
 ) -> Dict[int, int]:
-    print (streaming_cluster_endpoint)
-    consumer = kem.create_streaming_consumer (streaming_cluster_endpoint, streaming_cluster_region, topic, consumer_group)
+    consumer = KafkaConsumer (
+        bootstrap_servers         = streaming_cluster_endpoint,
+        security_protocol         = 'SASL_SSL',
+        sasl_mechanism            ='OAUTHBEARER',
+        sasl_oauth_token_provider = kem.MSKTokenProvider (streaming_cluster_region),
+        group_id                  = consumer_group,
+        auto_offset_reset         = 'earliest',
+        enable_auto_commit        = True
+    )
 
     try:
         partitions = consumer.partitions_for_topic (topic)
@@ -36,7 +43,7 @@ def reset_offsets_to_earliest (
         earliest_offsets = consumer.beginning_offsets (topic_partitions)
 
         commit_map = {
-            tp: OffsetAndMetadata (earliest_offsets[tp], None) for tp in topic_partitions
+            tp: OffsetAndMetadata (earliest_offsets[tp], '', -1) for tp in topic_partitions
         }
 
         consumer.assign (topic_partitions)
@@ -174,10 +181,11 @@ def main (argv):
         source_mapping_details = dsc.load_generated (PROGRAM_NAME, event_source_details_key_cache)
 
     if (argv[KREWIND_ONLY]):
-        reset_associated_offsets (source_mapping_details, ingestor_functions)
+        return reset_associated_offsets (source_mapping_details, ingestor_functions)
 
     else:
         updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE])
+        return updated_event_source_mappings
 
 KENABLE = 'enable'
 KPREFIX = 'prefix'
@@ -245,8 +253,7 @@ def parse_argv ():
     options = {
         KPREFIX: '',
         KSUFFIX: '',
-        KCONTAINS: '',
-        KREWIND_ONLY: False
+        KCONTAINS: ''
     }
 
     iterator = 0
@@ -267,8 +274,8 @@ def parse_argv ():
     # print (options)
 
     errors_exist = False
-    if (KENABLE not in options):
-        print (F'--enable is required')
+    if (KENABLE not in options and KREWIND_ONLY not in options):
+        print (F'One of --enable or --rewind-only is required')
         errors_exist = True
 
     if (options[KPREFIX] == '' and options[KSUFFIX] == '' and options[KCONTAINS] == ''):
@@ -282,4 +289,6 @@ def parse_argv ():
 
 if (__name__ == '__main__'):
     argv = parse_argv ()
-    main (argv)
+
+    retval = main (argv)
+    print (retval)
