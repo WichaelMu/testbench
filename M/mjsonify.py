@@ -46,11 +46,10 @@ def main ():
         return json.dumps (dict_form, default = str, indent = 4)
 
     except Exception as e:
-        return json.dumps (
-            {
+        return json.dumps ({
                 'MJSN': 'Failed to parse input',
                 'error': str (e),
-                'head': inbound[:300],
+                'inbound': inbound
             },
             indent=4,
         )
