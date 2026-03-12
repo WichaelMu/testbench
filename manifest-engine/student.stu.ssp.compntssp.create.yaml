@@ -342,6 +342,10 @@ target:
       availability_start_date: source.input.data.AVAIL_START_DT
       availability_end_date: source.input.data.AVAIL_END_DT
 
+      zzz:
+        eval:
+          f"{source.input.data.STU_ID},{source.input.data.PARENT_SSP_NO},{source.input.data.PARENT_SSP_ATT_NO},{source.input.data.SSP_NO},{source.input.data.SSP_ATT_NO},{source.input.data.SPK_NO}"
+
       erase!:
         - datacontenttype
         - source
@@ -369,7 +373,7 @@ sinks:
 #     parallel: true
 #     endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
 #     index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
-#     document_id: f"{source.input.aueduutsstudentsciastudentid}"
+#     document_id: f"{source.input.data.STU_ID},{source.input.data.PARENT_SSP_NO},{source.input.data.PARENT_SSP_ATT_NO},{source.input.data.SSP_NO},{source.input.data.SSP_ATT_NO},{source.input.data.SPK_NO}"
 #     iam:
 #       region: f"{envar ('IAM_REGION')}"
 #       service: f"{envar ('IAM_SERVICE_NAME')}"
