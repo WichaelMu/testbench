@@ -72,23 +72,23 @@ target:
         - data.government_reporting.gv1_parent_student_study_package_identity
 
 sinks:
-#   stdout:
-#     # parallel: true
-#     output:
+  stdout:
+    # parallel: true
+    output:
 
 #   streaming:
 #     parallel: true
 #     cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
 #     cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
 #     topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
+# 
+#   opensearch:
+#     parallel: true
+#     endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
+#     index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
+#     document_id: f"{locals.student_student_id}"
+#     iam:
+#       region: f"{envar ('IAM_REGION')}"
+#       service: f"{envar ('IAM_SERVICE_NAME')}"
 
-  opensearch:
-    parallel: true
-    endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
-    index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
-    document_id: f"{locals.student_student_id}"
-    iam:
-      region: f"{envar ('IAM_REGION')}"
-      service: f"{envar ('IAM_SERVICE_NAME')}"
-
-# yield: sinks.stdout.output
+yield: sinks.stdout.output

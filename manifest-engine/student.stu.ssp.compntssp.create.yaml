@@ -19,7 +19,9 @@ target:
         id: source.meta.kafka_key
         source: source.meta.kafka_topic
         type: source.input.type
-        time: source.input.time
+        time:
+          eval:
+            F'{formattoiso8601 (source.input.time, "%Y-%m-%d %H:%M:%S")}'
 
       system:
         action:
@@ -57,7 +59,9 @@ target:
 
       study_measure:
         study_measure:
-          value: source.input.data.CR_VAL
+          value:
+            eval:
+              F'{str (source.input.data.CR_VAL)}'
           code: source.input.data.DFLT_STUDY_MEASURE_CD
 
         variation_flag: source.input.data.VAR_IND
@@ -351,23 +355,23 @@ target:
         - data/LAST_MOD_TIME
 
 sinks:
-#   stdout:
-#     # parallel: true
-#     output:
+  stdout:
+    # parallel: true
+    output:
 
-  streaming:
-    parallel: true
-    cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
-    cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
-    topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
+#   streaming:
+#     parallel: true
+#     cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
+#     cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
+#     topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
+# 
+#   opensearch:
+#     parallel: true
+#     endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
+#     index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
+#     document_id: f"{source.input.aueduutsstudentsciastudentid}"
+#     iam:
+#       region: f"{envar ('IAM_REGION')}"
+#       service: f"{envar ('IAM_SERVICE_NAME')}"
 
-  opensearch:
-    parallel: true
-    endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
-    index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
-    document_id: f"{locals.student_student_id}"
-    iam:
-      region: f"{envar ('IAM_REGION')}"
-      service: f"{envar ('IAM_SERVICE_NAME')}"
-
-# yield: sinks.stdout.output
+yield: sinks.stdout.output
