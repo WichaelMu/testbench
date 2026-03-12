@@ -1,5 +1,6 @@
 import sys
 import boto3
+import botocore.errorfactory as bef
 
 from functional import pseq, seq
 
@@ -135,12 +136,18 @@ def function_name_from_arn (arn):
     return arn.split(':')[-1]
 
 def update_event_source_mappings (lambda_client, event_source_mappings, should_enable):
+    def exec (esm):
+        try:
+            return lambda_client.update_event_source_mapping (
+                UUID = esm['UUID'],
+                FunctionName = function_name_from_arn (esm['FunctionArn']),
+                Enabled = should_enable
+            )
+        except bef.ResourceInUseException as riue:
+            return { 'Failed': F'{esm['FunctionArn']} is in use. Skipping...' }
+
     update_response = seq (event_source_mappings) \
-        .map (lambda esm: lambda_client.update_event_source_mapping (
-            UUID = esm['UUID'],
-            FunctionName = function_name_from_arn (esm['FunctionArn']),
-            Enabled = should_enable
-        )) \
+        .map (lambda esm: exec (esm)) \
         .to_list ()
 
     return update_response
@@ -180,12 +187,16 @@ def main (argv):
     else:
         source_mapping_details = dsc.load_generated (PROGRAM_NAME, event_source_details_key_cache)
 
-    if (argv[KREWIND_ONLY]):
-        return reset_associated_offsets (source_mapping_details, ingestor_functions)
+    result = None
+
+    if (argv.get (KREWIND_ONLY, False)):
+        result = reset_associated_offsets (source_mapping_details, ingestor_functions)
 
     else:
         updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE])
-        return updated_event_source_mappings
+        result = updated_event_source_mappings
+
+    print (result)
 
 KENABLE = 'enable'
 KPREFIX = 'prefix'
@@ -290,5 +301,4 @@ def parse_argv ():
 if (__name__ == '__main__'):
     argv = parse_argv ()
 
-    retval = main (argv)
-    print (retval)
+    main (argv)
