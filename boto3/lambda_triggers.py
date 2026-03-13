@@ -1,6 +1,5 @@
 import sys
 import boto3
-import botocore.errorfactory as bef
 
 from functional import pseq, seq
 
@@ -141,8 +140,11 @@ def update_event_source_mappings (lambda_client, event_source_mappings, should_e
                 FunctionName = function_name_from_arn (esm['FunctionArn']),
                 Enabled = should_enable
             )
-        except bef.ResourceInUseException as riue:
-            return { 'Failed': F'{esm['FunctionArn']} is in use. Skipping...' }
+        except Exception as riue:
+            return {
+                'Error': riue,
+                'Failed': F'{esm['FunctionArn']} is likely in use. Skipping...'
+            }
 
     update_response = seq (event_source_mappings) \
         .map (lambda esm: exec (esm)) \
