@@ -13,13 +13,7 @@ from kafka import KafkaConsumer
 import dscore as dsc
 
 PROGRAM_NAME = 'lambda-trigger-laziness'
-def reset_offsets_to_earliest (
-    streaming_cluster_endpoint: str,
-    streaming_cluster_region: str,
-    topic: str,
-    consumer_group: str,
-    function_name: str,
-) -> Dict[int, int]:
+def reset_offsets_to_earliest (streaming_cluster_endpoint, streaming_cluster_region, topic, consumer_group, function_name):
     consumer = KafkaConsumer (
         bootstrap_servers         = streaming_cluster_endpoint,
         security_protocol         = 'SASL_SSL',
