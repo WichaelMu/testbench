@@ -1,0 +1,84 @@
+source:
+  input:
+
+callouts:
+
+locals:
+  env:
+    eval:
+      f"{envar ('ENV')}"
+
+  student_study_package_student_id: source.input.aueduutsstudentsciastudentid
+  student_study_package_applicationno: source.input.aueduutsstudentsciaapplicationno
+  student_study_package_version: source.input.aueduutsstudentsciaspkversion
+  student_study_package_attempt: source.input.aueduutsstudentsciasspattempt
+  student_study_package_number: source.input.aueduutsstudentsciasspno
+
+  study_package_code: source.input.aueduutsstudentsciaspkcode
+  study_package_number: source.input.aueduutsstudentsciaspkno
+
+target:
+  output:
+    meta:
+      "@last_seen_at":
+        eval:
+          f"{iso8601 ()}"
+
+      event:
+        id: source.meta.kafka_key
+        source: source.meta.kafka_topic
+        type: source.input.type
+        time: source.input.time
+
+      system:
+        action:
+          eval:
+            F'{lower (source.input.data.student_study_package_offer.action)}'
+        id: source.input.id
+        sequence_no: source.input.aueduutsstudentsciasequencenumber
+        userid: source.input.aueduutsstudentsciauserid
+        function: source.input.aueduutsstudentsciafunction
+        status: source.input.aueduutsstudentsciastatus
+        subscriber_id: source.input.aueduutsstudentsciasubscriberid
+        status_code: source.input.aueduutsstudentsciastatuscode
+
+      study_package:
+        code: locals.study_package_code
+        number: locals.study_package_number
+
+      student_study_package:
+        student_id: locals.student_study_package_student_id
+        application_no: locals.student_study_package_applicationno
+        version: loacls.student_study_package_version
+        attempt: locals.student_study_package_attempt
+        number: locals.student_study_package_number
+
+    data:
+      merge!:
+        - source.input.data.student_study_package_offer
+
+      erase!:
+        - data.action
+        - data.student_study_package_offer
+
+sinks:
+  stdout:
+    # parallel: true
+    output:
+
+#   streaming:
+#     parallel: true
+#     cluster_endpoint: f"{envar ('STREAMING_CLUSTER_ENDPOINT')}"
+#     cluster_region: f"{envar ('STREAMING_CLUSTER_REGION')}"
+#     topic: f"{envar ('STREAMING_EGRESS_TOPIC')}"
+# 
+#   opensearch:
+#     parallel: true
+#     endpoint: f"{envar ('OPENSEARCH_ENDPOINT_URL')}"
+#     index_name: f"{envar ('OPENSEARCH_INDEX_NAME')}"
+#     document_id: f"{locals.student_study_package_student_id},{locals.study_package_code},{locals.study_package_version},{locals.student_study_package_applicationno}"
+#     iam:
+#       region: f"{envar ('IAM_REGION')}"
+#       service: f"{envar ('IAM_SERVICE_NAME')}"
+
+yield: sinks.stdout.output
