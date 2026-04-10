@@ -5,6 +5,7 @@ import gzip
 import shutil
 import logging
 import boto3
+import requests
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -140,5 +141,29 @@ async def fetch ():
         print ('error')
         print (e)
 
+def meth2 ():
+    secrets       = dsc.load_json ('secrets.json')['CANVAS']
+    client_id     = secrets['ClientId']
+    client_secret = secrets['ClientSecret']
+
+    access_token = requests.post (
+        'https://api-gateway.instructure.com/ids/auth/login',
+        data = { 'grant_type': 'client_credentials' },
+        auth = (client_id, client_secret)
+    ).json ()['access_token']
+
+    namespace = 'canvas'
+    job_id = 'eeac3f1b-04e4-4e43-9cf3-df424403aef2'
+    response = requests.get(
+        F'https://api-gateway.instructure.com/dap/job/{job_id}',
+        headers = {
+            'Authorization': F'Bearer {access_token}',
+            'Accept': '*/*'
+        }
+    )
+
+    print (response.json ())
+
 if (__name__ == '__main__'):
-    asyncio.run (fetch ())
+    meth2 ()
+    # asyncio.run (fetch ())

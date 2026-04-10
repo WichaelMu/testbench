@@ -47,6 +47,10 @@ def set_environment (environment):
     ENVIRONMENT = 'PROD' if USE_PROD else 'NONPROD'
     refresh_environment ()
 
+def force_set_access_token (access_token):
+    global global_access_token
+    global_access_token = access_token
+
 def set_access_token ():
     credentials = load_json ('secrets.json')
     client_id = credentials[ENVIRONMENT]['client_id']
@@ -68,13 +72,18 @@ def set_access_token ():
     global global_access_token
     global_access_token = token_data['access_token']
 
+    return global_access_token
+
 def get_custom_auth (**kwargs):
+    scope = kwargs.get ('scope', None)
     payload = {
         'grant_type': 'client_credentials',
         'client_id': kwargs['client_id'],
         'client_secret': kwargs['client_secret'],
-        'scope': kwargs['scope']
     }
+
+    if (scope is not None):
+        payload |= { 'scope': scope }
 
     response = requests.post (kwargs['token_url'], data = payload)
     response.raise_for_status ()
@@ -82,6 +91,8 @@ def get_custom_auth (**kwargs):
 
     global global_access_token
     global_access_token = token_data['access_token']
+
+    return global_access_token
 
 def get_api_url ():
     return 'https://data.curriculum.nonprod.cortex.uts.edu.au' if not get_environment () else 'https://data.curriculum.cortex.uts.edu.au'
