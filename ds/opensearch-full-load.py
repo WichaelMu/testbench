@@ -513,8 +513,8 @@ def lambda_handler (event, context):
         asyncio.set_event_loop (loop)
 
         for entity_name in entity_names:
-            # purge_index (entity_name)
-            # purge_index (f'{entity_name}_knn')
+            purge_index (entity_name)
+            purge_index (f'{entity_name}_knn')
 
             lem.info (f"processing entity={entity_name}")
 
@@ -529,19 +529,19 @@ def lambda_handler (event, context):
 
                 page += 1
 
-                # future_events = asyncio.run (tokenise_events (events, entity_name))
+                future_events = asyncio.run (tokenise_events (events, entity_name))
 
-                # lem.info (f'gathered {len (future_events)} events')
+                lem.info (f'gathered {len (future_events)} events')
 
-                # total_event_count += len (future_events)
+                total_event_count += len (future_events)
                 total_event_count += len (events)
                 receiver += events
 
-                # loop.run_until_complete (event_dispatcher (events = future_events,
-                #                                            entity_name = entity_name,
-                #                                            headers = {
-                #                                                'Content-Type': 'application/orjson; charset=utf-8'
-                #                                            }))
+                loop.run_until_complete (event_dispatcher (events = future_events,
+                                                           entity_name = entity_name,
+                                                           headers = {
+                                                               'Content-Type': 'application/orjson; charset=utf-8'
+                                                           }))
 
             lem.info (f'{entity_name} summary: {total_event_count} academic items furnished into OpenSearch')
 
@@ -564,11 +564,11 @@ def lambda_handler (event, context):
 if (__name__ == '__main__'):
     correlation_id, start_time = lem.init_logger ('opensearch-full-load')
 
-    # envars = dsc.load_json ('secrets.json')['OPENSEARCH']['NONPROD']
-    # os.environ.update (envars)
+    envars = dsc.load_json ('secrets.json')['OPENSEARCH']['NONPROD']
+    os.environ.update (envars)
 
-    # lambda_handler ({}, {})
+    lambda_handler ({}, {})
 
-    # dsc.save_generated (PROGRAM_NAME, 'unprocessable-courses', not_processable_courses)
-    # dsc.save_generated (PROGRAM_NAME, 'unprocessable-subjects', not_processable_subjects)
-    # dsc.save_generated (PROGRAM_NAME, 'unprocessable-substructures', not_processable_substructures)
+    dsc.save_generated (PROGRAM_NAME, 'unprocessable-courses', not_processable_courses)
+    dsc.save_generated (PROGRAM_NAME, 'unprocessable-subjects', not_processable_subjects)
+    dsc.save_generated (PROGRAM_NAME, 'unprocessable-substructures', not_processable_substructures)
