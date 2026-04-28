@@ -1,5 +1,6 @@
 import sys
 import boto3
+import socket
 
 from functional import pseq, seq
 
@@ -10,45 +11,63 @@ from kafka import TopicPartition
 from kafka.structs import OffsetAndMetadata
 from kafka import KafkaConsumer
 
+from kafka import KafkaConsumer, TopicPartition, OffsetAndMetadata
+from aws_msk_iam_sasl_signer import MSKAuthTokenProvider
+from kafka.sasl.oauth import AbstractTokenProvider
+
 import dscore as dsc
 
 PROGRAM_NAME = 'lambda-trigger-laziness'
-def reset_offsets_to_earliest (streaming_cluster_endpoint, streaming_cluster_region, topic, consumer_group, function_name):
+class MSKTokenProvider (AbstractTokenProvider):
+    def __init__(self, region):
+        self.region = region
+
+    def token (self):
+        token, _ = MSKAuthTokenProvider.generate_auth_token (self.region)
+        return token
+
+def reset_consumer_group (data):
+    streaming_cluster_endpoint = data['streaming-cluster-endpoint']
+    streaming_cluster_region   = data['streaming-cluster-region']
+    topic                      = data['topic']
+    consumer_group             = data['consumer-group']
+    function_name              = data.get ('function-name', 'consumer-group-resetter')
+
     consumer = KafkaConsumer (
         bootstrap_servers         = streaming_cluster_endpoint,
         security_protocol         = 'SASL_SSL',
-        sasl_mechanism            ='OAUTHBEARER',
-        sasl_oauth_token_provider = kem.MSKTokenProvider (streaming_cluster_region),
+        sasl_mechanism            = 'OAUTHBEARER',
+        sasl_oauth_token_provider = MSKTokenProvider (streaming_cluster_region),
         group_id                  = consumer_group,
-        auto_offset_reset         = 'earliest',
-        enable_auto_commit        = True
+        enable_auto_commit        = False,
+        client_id                 = F'{function_name}.{socket.gethostname ()}',
+        request_timeout_ms        = 30000,
     )
 
     try:
         partitions = consumer.partitions_for_topic (topic)
 
-        if (partitions is None) or (len (partitions) == 0):
-            raise ValueError (f'no partitions found for topic {topic!r}')
+        if not partitions:
+            raise ValueError (F'Topic not found or no partitions visible: {topic}')
 
         topic_partitions = [
-            TopicPartition (topic, partition_id) for partition_id in sorted (partitions)
+            TopicPartition (topic, partition_id)
+            for partition_id in sorted (partitions)
         ]
 
         earliest_offsets = consumer.beginning_offsets (topic_partitions)
 
-        commit_map = {
-            tp: OffsetAndMetadata (earliest_offsets[tp], '', -1) for tp in topic_partitions
+        offsets_to_commit = {
+            tp: OffsetAndMetadata (earliest_offsets[tp], '', -1)
+            for tp in topic_partitions
         }
 
-        consumer.assign (topic_partitions)
-        consumer.commit (offsets = commit_map)
+        consumer.commit (offsets=offsets_to_commit)
 
-        return {
-            tp.partition: earliest_offsets[tp] for tp in topic_partitions
-        }
+        return { F'{tp.topic}:{tp.partition}': earliest_offsets[tp] for tp in topic_partitions }
 
     finally:
-        consumer.close ()
+        consumer.close (autocommit=False)
 
 def reset_associated_offsets (source_mapping_details, ingestor_functions_lookup):
     result = {}
@@ -59,13 +78,24 @@ def reset_associated_offsets (source_mapping_details, ingestor_functions_lookup)
             .map (lambda f: f['Environment']['Variables']) \
             .to_list ()[0]
 
-        streaming_cluster_endpoint = function_envars['STREAMING_CLUSTER_ENDPOINT']
-        streaming_cluster_region   = function_envars['STREAMING_CLUSTER_REGION']
+        import os
+        streaming_cluster_endpoint = function_envars.get ('STREAMING_CLUSTER_ENDPOINT', os.environ['STREAMING_CLUSTER_ENDPOINT'])
+        streaming_cluster_region   = function_envars.get ('STREAMING_CLUSTER_REGION', 'ap-southeast-2')
         topic                      = smd['Topics'][0]
         consumer_group             = smd['AmazonManagedKafkaEventSourceConfig']['ConsumerGroupId']
         function_name              = function_name_from_arn (smd['FunctionArn'])
 
-        result |= { function_name_from_arn (smd['FunctionArn']): reset_offsets_to_earliest (streaming_cluster_endpoint, streaming_cluster_region, topic, consumer_group, function_name) }
+        reset_consumer_group_payload = {
+            'streaming-cluster-endpoint': streaming_cluster_endpoint,
+            'streaming-cluster-region':   streaming_cluster_region,
+            'topic':                      topic,
+            'consumer-group':             consumer_group,
+            'function-name':              function_name
+        }
+
+        print (reset_consumer_group)
+
+        result |= { function_name_from_arn (smd['FunctionArn']): reset_consumer_group (reset_consumer_group_payload) }
 
     return { 'reset': result }
 
@@ -124,7 +154,7 @@ def get_event_source_mappings (lambda_client, event_source_mappings):
     return event_source_mapping_responses
 
 def function_name_from_arn (arn):
-    return arn.split(':')[-1]
+    return arn.split (':')[-1]
 
 def update_event_source_mappings (lambda_client, event_source_mappings, should_enable):
     def exec (esm):
