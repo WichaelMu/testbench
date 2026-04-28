@@ -75,9 +75,8 @@ def construct_data_entities (tag_lookup, event, rule):
     }
 
 def ddb_compliant (value):
-    from decimal import Decimal
     if isinstance (value, float):
-        return Decimal (str (value))
+        return str (value)
 
     if isinstance (value, dict):
         return { str (k): ddb_compliant (v) for k, v in value.items () }
@@ -90,9 +89,6 @@ def ddb_compliant (value):
 
     if isinstance (value, set):
         return { ddb_compliant (v) for v in value }
-
-    if isinstance (value, Decimal):
-        return value
 
     if isinstance (value, (str, int, bool)) or value is None:
         return value
@@ -213,12 +209,27 @@ def persist (dtags, event, rule, dynamodb_table):
     rule_response            = ddb_dispatch (dynamodb, ru_pk, ru_sk, dynamodb_table, constructed['Rule'])
 
     return {
-        'responses': [
-            student_root_response,
-            cohort_root_response,
-            membership_edge_response,
-            rule_response
-        ]
+        'constructed-data-entities': constructed,
+        'dynamodb-key-fields': {
+            'student-root': {
+                'PK': sr_pk,
+                'SK': sr_sk,
+                'StudenId': sr_sid
+            },
+            'cohort-root': {
+                'PK': cr_pk,
+                'SK': cr_sk
+            },
+            'membership-edge': {
+                'PK': me_pk,
+                'SK': me_sk,
+                'GSI': gsi
+            },
+            'rule-definition': {
+                'PK': ru_pk,
+                'SK': ru_sk
+            }
+        }
     }
 
 def persist_results (tags, event, rule):
@@ -228,7 +239,9 @@ def persist_results (tags, event, rule):
         .filter (lambda test_tags: 'NoGood' not in test_tags.keys ()) \
         .map (lambda good_tags: persist (good_tags, event, rule, 'nonprod_student_cohorts')) \
         .to_list ()
+
     dsc.save_generated (PROGRAM_NAME, 'ddb-responses', data_entities)
+    print (data_entities)
 
 def main ():
     event = dsc.load_json ('rules/input.json')
