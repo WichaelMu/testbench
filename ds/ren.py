@@ -30,9 +30,9 @@ NEVER_DATE = '3999-12-31'
 def construct_data_entities (tag_lookup, event, rule):
     cohort_id = tag_lookup['Cohort']
     cohort = {
-        'cohortId': cohort_id,
-        'cohortName': cohorts_lookup_table.to_group_name (cohort_id),
-        'cohortDescription': tag_lookup.get ('GroupDescription', NOT_MAPPED),
+        'groupId': cohort_id,
+        'groupName': cohorts_lookup_table.to_group_name (cohort_id),
+        'groupDescription': tag_lookup.get ('GroupDescription', NOT_MAPPED),
         'owner': {
             'partyName':        tag_lookup.get ('PartyName', NOT_MAPPED),
             'partyId':          tag_lookup.get ('PartyId', NOT_MAPPED),
@@ -40,7 +40,7 @@ def construct_data_entities (tag_lookup, event, rule):
             'partyDescription': tag_lookup.get ('PartyDescription', NOT_MAPPED)
         },
         'productVertical':   tag_lookup.get ('ProductVertical', NOT_MAPPED),
-        'cohortType':        tag_lookup.get ('GroupType', NOT_MAPPED),
+        'groupType':        tag_lookup.get ('GroupType', NOT_MAPPED),
         'sensitivityClass':  tag_lookup.get ('SensitivityClass', NOT_MAPPED),
         'status':            tag_lookup.get ('Status', NOT_MAPPED),
         'effectiveFromDate': tag_lookup.get ('EffectiveFromDate', NOT_MAPPED),
@@ -49,7 +49,7 @@ def construct_data_entities (tag_lookup, event, rule):
 
     cohort_membership = {
         'studentId':         tag_lookup.get ('StudentId', NOT_MAPPED),
-        'cohortId':          cohort_id,
+        'groupId':          cohort_id,
         'status':            cohort['status'],
         'effectiveFromDate': cohort['effectiveFromDate'],
         'effectiveToDate':   cohort['effectiveToDate'],
