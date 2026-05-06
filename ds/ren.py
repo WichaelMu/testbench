@@ -159,7 +159,7 @@ def ddb_construct_cohort_root (dtags, event):
 def ddb_construct_membership_edge (dtags, event):
     student_id = dtags.get ('StudentId', NOT_MAPPED)
     cohort_id   = dtags.get ('Cohort', NOT_MAPPED)
-    yyyymmdd   = dtags.get ('LastModifiedDate', NOT_MAPPED)
+    yyyymmdd   = dtags.get ('EffectiveFromDate', NOT_MAPPED)
     yyyymmdd   = datetime.fromisoformat (yyyymmdd).strftime ('%Y%m%d')
 
     pk = F'STUDENT#{student_id}'
