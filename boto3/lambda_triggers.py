@@ -79,7 +79,7 @@ def reset_associated_offsets (source_mapping_details, ingestor_functions_lookup)
             .to_list ()[0]
 
         import os
-        streaming_cluster_endpoint = function_envars.get ('STREAMING_CLUSTER_ENDPOINT', os.environ['STREAMING_CLUSTER_ENDPOINT'])
+        streaming_cluster_endpoint = function_envars.get ('STREAMING_CLUSTER_ENDPOINT', None)
         streaming_cluster_region   = function_envars.get ('STREAMING_CLUSTER_REGION', 'ap-southeast-2')
         topic                      = smd['Topics'][0]
         consumer_group             = smd['AmazonManagedKafkaEventSourceConfig']['ConsumerGroupId']
@@ -93,7 +93,7 @@ def reset_associated_offsets (source_mapping_details, ingestor_functions_lookup)
             'function-name':              function_name
         }
 
-        print (reset_consumer_group)
+        print (reset_consumer_group_payload)
 
         result |= { function_name_from_arn (smd['FunctionArn']): reset_consumer_group (reset_consumer_group_payload) }
 
@@ -172,6 +172,7 @@ def update_event_source_mappings (lambda_client, event_source_mappings, should_e
 
     update_response = seq (event_source_mappings) \
         .map (lambda esm: exec (esm)) \
+        .map (lambda esm: esm['FunctionArn']) \
         .to_list ()
 
     return update_response
@@ -196,6 +197,10 @@ def main (argv):
 
     else:
         ingestor_functions = dsc.load_generated (PROGRAM_NAME, request_key_cache)
+
+    if (argv[KQUERY_ONLY]):
+        print (pseq (ingestor_functions).map (lambda x: x['FunctionName']).to_list ())
+        return
 
     if (not dsc.has_generated (PROGRAM_NAME, event_source_map_key_cache)):
         event_source_mappings = list_event_source_mappings (lambda_client, ingestor_functions)
@@ -227,6 +232,7 @@ KPREFIX = 'prefix'
 KSUFFIX = 'suffix'
 KCONTAINS = 'contains'
 KREWIND_ONLY = 'rewind-only'
+KQUERY_ONLY = 'query'
 
 def parse_argv ():
     argv = sys.argv[1:]
@@ -248,6 +254,11 @@ def parse_argv ():
                     sys.exit (1)
 
                 return { KENABLE: result }, iterator
+
+            case '--dry' | '--query':
+                iterator += 1
+
+                return { KQUERY_ONLY: True }, iterator
 
             case '--prefix':
                 iterator += 1
@@ -288,7 +299,8 @@ def parse_argv ():
     options = {
         KPREFIX: '',
         KSUFFIX: '',
-        KCONTAINS: ''
+        KCONTAINS: '',
+        KQUERY_ONLY: False
     }
 
     iterator = 0
