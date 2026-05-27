@@ -322,8 +322,9 @@ def parse_argv ():
 
     errors_exist = False
     if (KENABLE not in options and KREWIND_ONLY not in options):
-        print (F'One of --enable or --rewind-only is required')
-        errors_exist = True
+        if (not options[KQUERY_ONLY]):
+            print (F'One of --enable or --rewind-only is required')
+            errors_exist = True
 
     if (options[KPREFIX] == '' and options[KSUFFIX] == '' and options[KCONTAINS] == ''):
         print (F'One of --prefix, --suffix, or --contains must be present')
