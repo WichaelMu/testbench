@@ -276,7 +276,57 @@ def try_parse_int (i):
         return False
     return False
 
+def get_path (value, path, list_strategy = 'first', join_separator=', '):
+    from collections.abc import Mapping
+
+    parts = path.split ('.')
+
+    def walk (current, remaining):
+        if not remaining:
+            return current
+
+        if current is None:
+            return None
+
+        key = remaining[0]
+        rest = remaining[1:]
+
+        if (isinstance (current, Mapping)):
+            return walk (current.get (key), rest)
+
+        if (isinstance (current, list)):
+            values = [ walk (item, remaining) for item in current ]
+
+            values = [ item for item in values if item is not None ]
+
+            if (not values):
+                return None
+
+            if (list_strategy == 'first'):
+                return values[0]
+
+            if (list_strategy == 'join'):
+                return join_separator.join (str (item) for item in values)
+
+            if (list_strategy == 'list'):
+                return values
+
+            raise ValueError (F'Unknown list_strategy: {list_strategy}')
+
+        return None
+
+    return walk (value, parts)
+
 def to_xlsx (in_array, columns_to_keep, fq_output_path, sheet_name='Sheet1'):
-    df = pd.DataFrame.from_records (in_array) if in_array else pd.DataFrame ()
-    df = df.reindex (columns = columns_to_keep)
-    df.to_excel (fq_output_path, index=False, sheet_name = sheet_name)
+    rows = []
+
+    for item in in_array:
+        row = {}
+
+        for column in columns_to_keep:
+            row[column] = get_path (item, column)
+
+        rows.append(row)
+
+    df = pd.DataFrame (rows, columns = columns_to_keep)
+    df.to_excel (fq_output_path, index = False, sheet_name = sheet_name)
