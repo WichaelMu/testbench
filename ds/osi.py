@@ -8,7 +8,7 @@ from functional import pseq, seq
 PROGRAM_NAME = 'urgent-osi'
 
 def remove_ml_attributes (markup):
-    ATTRIBUTES_TO_REMOVE = [ "style" ]
+    ATTRIBUTES_TO_REMOVE = [ 'style' ]
     attributes = BeautifulSoup (markup, 'html.parser')
 
     for att in attributes.descendants:
@@ -65,24 +65,25 @@ def format_status (ia, is_draft):
 def exec (generated_key, url_suffix, extract_key, columns_to_keep, is_draft = False):
     if (not dsc.has_generated (PROGRAM_NAME, generated_key)):
         api_url = F'{dsc.get_api_url ()}/{url_suffix}'
+        print (api_url)
         result = dsc.request_in_parallel (api_url, extract_key, PROGRAM_NAME, generated_key)
 
     else:
         result = dsc.load_generated (PROGRAM_NAME, generated_key)
 
-        for ia in result:
-            ia = evaluate_owning_org (ia, is_draft)
-            ia = sanitise_description (ia)
-            ia = format_status (ia, is_draft)
+    for ia in result:
+        ia = evaluate_owning_org (ia, is_draft)
+        ia = sanitise_description (ia)
+        ia = format_status (ia, is_draft)
     
     result, none, multi = evaluate_teaching_org (result, is_draft)
-    dsc.to_xlsx (result, columns_to_keep, dsc.get_generated_path (PROGRAM_NAME, generated_key, '.xlsx'))
+    dsc.to_csv (result, columns_to_keep, dsc.get_generated_path (PROGRAM_NAME, generated_key, '.csv'))
 
 def main ():
     dsc.set_environment ('PROD')
     dsc.set_access_token ()
 
-    columns_to_keep = [ 'code', 'sms_version', CUSTOM_STATUS, 'description', F'{OWNING_ORG}-label', F'{OWNING_ORG}-value', F'{TEACHING_ORG}-label', F'{TEACHING_ORG}-value' ]
+    columns_to_keep = [ 'code', 'name', 'sms_version', CUSTOM_STATUS, 'description', F'{OWNING_ORG}-label', F'{OWNING_ORG}-value', F'{TEACHING_ORG}-label', F'{TEACHING_ORG}-value' ]
 
     exec ('subjects', 'subjects?page=', 'subjects', columns_to_keep)
     exec ('subjects-draft', 'subjects?status=draft&page=', 'subjects', columns_to_keep, is_draft = True)
