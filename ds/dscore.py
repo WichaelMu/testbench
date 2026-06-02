@@ -317,7 +317,7 @@ def get_path (value, path, list_strategy = 'first', join_separator=', '):
 
     return walk (value, parts)
 
-def to_xlsx (in_array, columns_to_keep, fq_output_path, sheet_name='Sheet1'):
+def to_export_df (in_array, columns_to_keep):
     rows = []
 
     for item in in_array:
@@ -329,4 +329,12 @@ def to_xlsx (in_array, columns_to_keep, fq_output_path, sheet_name='Sheet1'):
         rows.append(row)
 
     df = pd.DataFrame (rows, columns = columns_to_keep)
+    return df
+
+def to_xlsx (in_array, columns_to_keep, fq_output_path, sheet_name='Sheet1'):
+    df = to_export_df (in_array, columns_to_keep)
     df.to_excel (fq_output_path, index = False, sheet_name = sheet_name)
+
+def to_csv (in_array, columns_to_keep, fq_output_path, sheet_name='Sheet1'):
+    df = to_export_df (in_array, columns_to_keep)
+    df.to_csv (fq_output_path, index = False)
