@@ -79,7 +79,7 @@ def reset_associated_offsets (source_mapping_details, ingestor_functions_lookup)
             .to_list ()[0]
 
         import os
-        streaming_cluster_endpoint = function_envars.get ('STREAMING_CLUSTER_ENDPOINT', None)
+        streaming_cluster_endpoint = function_envars.get ('STREAMING_CLUSTER_ENDPOINT', os.environ.get ('STREAMING_CLUSTER_ENDPOINT', None))
         streaming_cluster_region   = function_envars.get ('STREAMING_CLUSTER_REGION', 'ap-southeast-2')
         topic                      = smd['Topics'][0]
         consumer_group             = smd['AmazonManagedKafkaEventSourceConfig']['ConsumerGroupId']
