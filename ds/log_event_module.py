@@ -10,6 +10,8 @@ import logging
 from datetime import datetime
 from ulid import monotonic as ulid
 
+import bob_the_exception_builder as bob
+
 aest = pytz.timezone ('Australia/Sydney')
 
 traces: list[dict] = []
@@ -19,9 +21,16 @@ logger_instance = None
 # This is inaccurate. Run init_logger (...) for precision.
 start_time = datetime.now ().astimezone (aest)
 
+NOTSET   =  0
+DEBUG    = 10
+INFO     = 20
+WARNING  = 30
+ERROR    = 40
+CRITICAL = 50
+
 stub = """
 Use the following for copying and pasting
-    lem.log (
+    lem.print (
         correlationId  = correlation_id,
         referenceId    = ref_id,
         message        = F'',
@@ -57,7 +66,7 @@ def set_service_name (svc_name):
     global service_name
     service_name = svc_name
 
-def init_logger (svc_name, log_verbosity = logging.INFO, logging_overrides = {}):
+def init_logger (svc_name, log_verbosity = INFO, logging_overrides = {}):
     set_service_name (svc_name)
     start_time = register_starting_time ()
     universal_uniq_lexico_sortable_id = generate_ulid_invoke_time ()
@@ -112,7 +121,7 @@ def get_callsite (depth):
         'line': frame.f_lineno
     }
 
-def log (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta = {}):
+def log (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta = {}, call = {}):
     log_entry = {
         'correlationId': correlationId,
         'referenceId':   referenceId,
@@ -126,16 +135,21 @@ def log (correlationId, referenceId, message, status, tracepoint, source, target
         'action':        action,
         'resource':      resource,
         'elapsedTime':   elapsedTime,
-        'meta':          meta
+        'meta':          meta,
+        'call':          call
     }
 
     traces.append (log_entry)
     return log_entry
 
-def print (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta = {}, verbosity = logging.INFO, callsite_depth = 3):
-    meta['callsite'] = get_callsite (callsite_depth)
+def print (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta = {}, verbosity = INFO, callsite_depth = 3, raised_exception:BaseException = None):
+    call = get_callsite (callsite_depth)
 
-    log_dict = log (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta)
+    if (verbosity >= logging.ERROR):
+        if (raised_exception is not None and isinstance (raised_exception, BaseException)):
+            call['callhistory'] = bob.build_stacktrace (raised_exception)
+
+    log_dict = log (correlationId, referenceId, message, status, tracepoint, source, target, action, resource, elapsedTime, meta, call)
     json_log = json.dumps (log_dict)
 
     if (logger_instance is None):
@@ -143,8 +157,16 @@ def print (correlationId, referenceId, message, status, tracepoint, source, targ
     else:
         logger_instance.log (verbosity, json_log)
 
+def jdump (json_object, verbosity = INFO):
+    jobject = json.dumps (json_object)
+
+    if (logger_instance is None):
+        logging.log (verbosity, jobject)
+    else:
+        logger_instance.log (verbosity, jobject)
+
 def info (w):
-    verbosity = logging.INFO
+    verbosity = INFO
     callsite = get_callsite (3)
 
     if (logger_instance is None):
@@ -153,7 +175,7 @@ def info (w):
         logger_instance.log (verbosity, F'{callsite["function"]}:{callsite["line"]} - {w}')
 
 def warning (w):
-    verbosity = logging.WARNING
+    verbosity = WARNING
     callsite = get_callsite (3)
 
     if (logger_instance is None):
@@ -162,7 +184,7 @@ def warning (w):
         logger_instance.log (verbosity, F'{callsite["function"]}:{callsite["line"]} - {w}')
 
 def error (w):
-    verbosity = logging.ERROR
+    verbosity = ERROR
     callsite = get_callsite (3)
 
     if (logger_instance is None):
@@ -171,7 +193,7 @@ def error (w):
         logger_instance.log (verbosity, F'{callsite["function"]}:{callsite["line"]} - {w}')
 
 def exception (w):
-    verbosity = logging.FATAL
+    verbosity = CRITICAL
     callsite = get_callsite (3)
 
     if (logger_instance is None):
