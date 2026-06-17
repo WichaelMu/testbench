@@ -7,11 +7,10 @@ import boto3
 import jwt
 import urllib.parse
 
-import log_event_module as lem
-
-import dscore as dsc
+import py_log_event_module as lem
 
 from simple_salesforce import Salesforce
+import email_validator as ev
 
 
 OBJECT_EXISTS  = 'OBJECT_EXISTS'
@@ -21,11 +20,21 @@ FIELD_CREATED  = 'FIELD_CREATED'
 FIELD_FAILED   = 'FIELD_FAILED'
 
 
+class StandardFieldIsNonExistent (Exception):
+    pass
+
+def get_secret_stuff ():
+    secret_name = os.environ['SECRET_NAME']
+    secretsmanager_client = boto3.client ('secretsmanager')
+    secret_response = secretsmanager_client.get_secret_value (SecretId = secret_name)
+    secret_stuff = secret_response['SecretString']
+    return json.loads (secret_stuff)
+
 def normalise_private_key (private_key):
     return private_key.replace ('\\n', '\n')
 
 def setup_salesforce_connection (correlation_id):
-    secret_stuff = dsc.load_json ('secrets.json')['SALESFORCE']
+    secret_stuff = get_secret_stuff ()
 
     login_url = secret_stuff['login_url'].rstrip ('/')
     private_key = normalise_private_key (secret_stuff['salesforce_key'])
@@ -103,6 +112,58 @@ def pascal_case (value):
         clean_parts.append (part[:1].upper () + part[1:])
 
     return ''.join (clean_parts)
+
+def is_email (value):
+    if (not isinstance (value, str)):
+        return False
+
+    try:
+        validation_result = ev.validate_email (value, check_deliverability = False)
+        return True
+
+    except ev.EmailSyntaxError as ese:
+        lem.print (
+            correlationId  = '',
+            referenceId    = '',
+            message        = F'Email validation failed.',
+            status         = 'FAILED',
+            tracepoint     = 'END',
+            source         = lem.service_name,
+            target         = 'Salesforce',
+            action         = 'POST',
+            resource       = 'Contact',
+            elapsedTime    = lem.delta_time (),
+            meta           = {
+                'what': type (ese).__name__,
+                'validation-message': str (ese)
+            },
+            verbosity      = lem.WARNING
+        )
+
+        return False
+
+    except Exception as e:
+        lem.print (
+            correlationId  = '',
+            referenceId    = '',
+            message        = F'Email validation faced an error.',
+            status         = 'FAILED',
+            tracepoint     = 'END',
+            source         = lem.service_name,
+            target         = 'Salesforce',
+            action         = 'POST',
+            resource       = 'Contact',
+            elapsedTime    = lem.delta_time (),
+            meta           = {
+                'what': type (e).__name__,
+                'validation-message': str (e)
+            },
+            verbosity      = lem.ERROR
+        )
+
+        raise e
+
+    return False
 
 def salesforce_field_api_name (path, value_type):
     name = '_'.join (map (pascal_case, path))
@@ -294,10 +355,35 @@ def picklist_value_label (value):
 
     return value[:1].upper () + value[1:]
 
+def normalise_picklist_values (values, default_value = None):
+    normalised = []
+
+    for value in values:
+        if (isinstance (value, dict)):
+            full_name = str (value['fullName'])
+            label     = str (value.get ('label', full_name))
+        else:
+            full_name = str (value)
+            label     = str (value)
+
+        normalised.append ({
+            'fullName': full_name,
+            'label': label,
+            'default': full_name == default_value
+        })
+
+    return normalised
+
 def field_metadata_from_spec (field_api_name, spec):
     field_type = str (spec.get ('type', 'text')).strip ()
 
     field_type_lower = field_type.lower ()
+
+    if (field_type_lower == 'standard'):
+        return None
+
+    if (field_type_lower == 'existing_only'):
+        return None
 
     label    = spec.get ('label', hoomanise_salesforce_api_name (field_api_name))
     required = spec.get ('required', False)
@@ -356,7 +442,7 @@ def field_metadata_from_spec (field_api_name, spec):
             'required': required
         }
 
-    elif (field_type_lower == 'boolean'):
+    elif (field_type_lower == 'boolean' or field_type_lower == 'checkbox'):
         metadata = {
             'label': label,
             'type': 'Checkbox',
@@ -384,16 +470,7 @@ def field_metadata_from_spec (field_api_name, spec):
                 'restricted': spec.get ('restricted', False),
                 'valueSetDefinition': {
                     'sorted': False,
-                    'value': list (
-                        map (
-                            lambda value: {
-                                'fullName': value,
-                                'label': picklist_value_label (value),
-                                'default': value == default_value
-                            },
-                            values
-                        )
-                    )
+                    'value': normalise_picklist_values (values, default_value)
                 }
             }
         }
@@ -509,17 +586,17 @@ def create_object_from_schema (instance_url, access_token, object_api_name, labe
     for field_api_name, raw_spec in sf_schema.items ():
         spec = normalise_field_spec (field_api_name, raw_spec)
 
-        if (field_api_name in SF_STANDARD_FIELDS):
-            lem.info (F'Skipping standard field: {object_api_name}.{field_api_name}')
-            continue
+        field_type = str (spec.get ('type', '')).lower ()
+
+        # If, for some reason, a default field does not exist...
+        if (field_api_name in SF_STANDARD_FIELDS or field_type == 'standard' or field_type == 'existing_only'):
+            if (spec.get ('must_exist', False)):
+                if (not field_exists (instance_url, access_token, object_api_name, field_api_name, api_version)):
+                    raise StandardFieldIsNonExistent (F'Expected field does not exist: {object_api_name}.{field_api_name}')
 
         metadata = field_metadata_from_spec (field_api_name, spec)
-
-        if (metadata is None):
-            lem.info (F'Skipping non-custom field: {object_api_name}.{field_api_name}')
-            continue
-
         field_creation_exit_code = create_custom_field (instance_url, access_token, object_api_name, field_api_name, metadata, api_version)
+
         if (field_creation_exit_code == FIELD_FAILED):
             faults.append ({
                 'object-name': object_api_name,
@@ -594,6 +671,83 @@ def get_latest_api_version (instance_url, access_token):
     )
 
     return F'v{latest["version"]}'
+
+def sanitise_salesforce_payload (payload):
+    sanitised = {}
+
+    for key, value in payload.items ():
+        if (value is None):
+            continue
+        if (isinstance (value, str) and value.strip () == ''):
+            continue
+
+        sanitised[key] = value
+
+    return sanitised
+
+def dispatch_salesforce_record (correlation_id, object_api_name, external_id_field, payload, salesforce_context_object):
+    if (external_id_field not in payload):
+        raise Exception (F'Missing external ID field {external_id_field} in payload')
+
+    instance_url = salesforce_context_object['InstanceUrl']
+    access_token = salesforce_context_object['AccessToken']
+    api_version  = salesforce_context_object['ApiVersion']
+
+    external_id_value = payload[external_id_field]
+
+    encoded_external_id_value = urllib.parse.quote (str (external_id_value), safe = '')
+    salesforce_payload        = sanitise_salesforce_payload (payload)
+    del salesforce_payload[external_id_field]
+
+    response = requests.patch (
+        F'{instance_url.rstrip ("/")}/services/data/{api_version}/sobjects/{object_api_name}/{external_id_field}/{encoded_external_id_value}',
+
+        headers = {
+            'Authorization': F'Bearer {access_token}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+
+        json    = salesforce_payload,
+        timeout = 30
+    )
+
+    if (response.status_code >= 400):
+        try:
+            meta_body = response.json ()
+        except:
+            meta_body = response.text
+
+        lem.print (
+            correlationId  = correlation_id,
+            referenceId    = correlation_id,
+            message        = F'Failed to dispatch record to Salesforce!',
+            status         = 'FAILED',
+            tracepoint     = 'END',
+            source         = 'MSK',
+            target         = instance_url,
+            action         = 'PATCH',
+            resource       = object_api_name,
+            elapsedTime    = lem.delta_time (),
+            meta           = {
+                'status:': response.status_code,
+                'object:': object_api_name,
+                'external-id-field:': external_id_field,
+                'external-id-value:': external_id_value,
+                'body:': meta_body
+            },
+            verbosity      = 40
+        )
+
+        response.raise_for_status ()
+
+    return {
+        'success': True,
+        'object': object_api_name,
+        'externalIdField': external_id_field,
+        'externalIdValue': external_id_value,
+        'response': response.json () if response.text.strip () != '' else 'NO_RESPONSE'
+    }
 
 def assert_salesforce_name (name):
     if (not isinstance (name, str)):

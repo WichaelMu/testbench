@@ -6,7 +6,7 @@ import log_event_module as lem
 
 import dscore as dsc
 
-import salesforce_constructor as sf
+import salesforce_module as sf
 
 def salesforce_context (correlation_id):
     salesforce_connection = sf.setup_salesforce_connection (correlation_id)
@@ -45,7 +45,7 @@ def exec ():
         object_api_name = 'Contact',
         fields = fields,
         where_equals = {
-            'UTSID__c': '0014121937'
+            'UTSID__c': '13938903'
         },
         fetch_all = True
     )

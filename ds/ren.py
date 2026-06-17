@@ -248,8 +248,9 @@ def main ():
     result = ren.run_rule_engine (event)
 
     tags = result['tags']
+    print (ren.construct_tags (tags))
 
-    persist_results (tags, event, result['rules'])
+    # persist_results (tags, event, result['rules'])
 
 if (__name__ == '__main__'):
     main ()
