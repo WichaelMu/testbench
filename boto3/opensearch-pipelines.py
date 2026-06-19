@@ -186,7 +186,13 @@ def exec (event, context):
     filtered_pipelines = filter_pipelines (pipeline_details, argv)
 
     if (KQUERY_ONLY in argv and argv[KQUERY_ONLY]):
-        print (filtered_pipelines)
+        print_pipelines = seq (filtered_pipelines) \
+            .map (lambda fp: seq (fp.items ()) \
+                .filter (lambda fpd: fpd[0] != 'PipelineDefinition') \
+                .to_dict ()
+            ) \
+            .to_list ()
+        print (print_pipelines)
         return
 
     if (KREWIND_ONLY in argv and argv[KREWIND_ONLY]):
