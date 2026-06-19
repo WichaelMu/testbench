@@ -185,6 +185,10 @@ def exec (event, context):
     pipeline_details = get_pipelines (osis_client, list_of_pipelines)
     filtered_pipelines = filter_pipelines (pipeline_details, argv)
 
+    if (KQUERY_ONLY in argv and argv[KQUERY_ONLY]):
+        print (filtered_pipelines)
+        return
+
     if (KREWIND_ONLY in argv and argv[KREWIND_ONLY]):
         topics = load_yaml (filtered_pipelines)
         result = reset_associated_offsets (topics)
