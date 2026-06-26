@@ -1,103 +1,18 @@
+import os
 import sys
 import boto3
 import socket
 
 from functional import pseq, seq
 
-import py_msk_serverless_data_streaming_client as kem
 from typing import Dict
-
-from kafka import TopicPartition
-from kafka.structs import OffsetAndMetadata
-from kafka import KafkaConsumer
-
-from kafka import KafkaConsumer, TopicPartition, OffsetAndMetadata
-from aws_msk_iam_sasl_signer import MSKAuthTokenProvider
-from kafka.sasl.oauth import AbstractTokenProvider
 
 import dscore as dsc
 
+import argv_parser as ap
+from argv_parser import KCONTAINS, KENABLE, KPREFIX, KREWIND_ONLY, KSUFFIX, KQUERY_ONLY
+
 PROGRAM_NAME = 'lambda-trigger-laziness'
-class MSKTokenProvider (AbstractTokenProvider):
-    def __init__(self, region):
-        self.region = region
-
-    def token (self):
-        token, _ = MSKAuthTokenProvider.generate_auth_token (self.region)
-        return token
-
-def reset_consumer_group (data):
-    streaming_cluster_endpoint = data['streaming-cluster-endpoint']
-    streaming_cluster_region   = data['streaming-cluster-region']
-    topic                      = data['topic']
-    consumer_group             = data['consumer-group']
-    function_name              = data.get ('function-name', 'consumer-group-resetter')
-
-    consumer = KafkaConsumer (
-        bootstrap_servers         = streaming_cluster_endpoint,
-        security_protocol         = 'SASL_SSL',
-        sasl_mechanism            = 'OAUTHBEARER',
-        sasl_oauth_token_provider = MSKTokenProvider (streaming_cluster_region),
-        group_id                  = consumer_group,
-        enable_auto_commit        = False,
-        client_id                 = F'{function_name}.{socket.gethostname ()}',
-        request_timeout_ms        = 30000,
-    )
-
-    try:
-        partitions = consumer.partitions_for_topic (topic)
-
-        if not partitions:
-            raise ValueError (F'Topic not found or no partitions visible: {topic}')
-
-        topic_partitions = [
-            TopicPartition (topic, partition_id)
-            for partition_id in sorted (partitions)
-        ]
-
-        earliest_offsets = consumer.beginning_offsets (topic_partitions)
-
-        offsets_to_commit = {
-            tp: OffsetAndMetadata (earliest_offsets[tp], '', -1)
-            for tp in topic_partitions
-        }
-
-        consumer.commit (offsets=offsets_to_commit)
-
-        return { F'{tp.topic}:{tp.partition}': earliest_offsets[tp] for tp in topic_partitions }
-
-    finally:
-        consumer.close (autocommit=False)
-
-def reset_associated_offsets (source_mapping_details, ingestor_functions_lookup):
-    result = {}
-    for smd in source_mapping_details:
-        function_arn = smd['FunctionArn']
-        function_envars = pseq (ingestor_functions_lookup) \
-            .filter (lambda f: f['FunctionArn'] == function_arn) \
-            .map (lambda f: f['Environment']['Variables']) \
-            .to_list ()[0]
-
-        import os
-        streaming_cluster_endpoint = function_envars.get ('STREAMING_CLUSTER_ENDPOINT', os.environ.get ('STREAMING_CLUSTER_ENDPOINT', None))
-        streaming_cluster_region   = function_envars.get ('STREAMING_CLUSTER_REGION', 'ap-southeast-2')
-        topic                      = smd['Topics'][0]
-        consumer_group             = smd['AmazonManagedKafkaEventSourceConfig']['ConsumerGroupId']
-        function_name              = function_name_from_arn (smd['FunctionArn'])
-
-        reset_consumer_group_payload = {
-            'streaming-cluster-endpoint': streaming_cluster_endpoint,
-            'streaming-cluster-region':   streaming_cluster_region,
-            'topic':                      topic,
-            'consumer-group':             consumer_group,
-            'function-name':              function_name
-        }
-
-        print (reset_consumer_group_payload)
-
-        result |= { function_name_from_arn (smd['FunctionArn']): reset_consumer_group (reset_consumer_group_payload) }
-
-    return { 'reset': result }
 
 def get_lambda_client ():
     lambda_client = boto3.client ('lambda')
@@ -130,7 +45,7 @@ def list_event_source_mappings (lambda_client, lambda_functions):
 
         while (event_source_mappings_response.get ('NextMarker', '') != ''):
             event_source_mappings_response = lambda_client.list_event_source_mappings (
-                FunctionName = func['FunctionName'],
+                FunctionName = lambda_function['FunctionName'],
                 Marker = event_source_mappings_response['NextMarker']
             )
 
@@ -219,123 +134,33 @@ def main (argv):
     result = None
 
     if (argv.get (KREWIND_ONLY, False)):
-        result = reset_associated_offsets (source_mapping_details, ingestor_functions)
+        for smd in source_mapping_details:
+            function_arn = smd['FunctionArn']
+            function_envars = pseq (ingestor_functions_lookup) \
+                .filter (lambda f: f['FunctionArn'] == function_arn) \
+                .map (lambda f: f['Environment']['Variables']) \
+                .to_list ()[0]
+
+            streaming_cluster_endpoint = function_envars.get ('STREAMING_CLUSTER_ENDPOINT', os.environ.get ('STREAMING_CLUSTER_ENDPOINT', None))
+            streaming_cluster_region   = function_envars.get ('STREAMING_CLUSTER_REGION', 'ap-southeast-2')
+            topic                      = smd['Topics'][0]
+            consumer_group             = smd['AmazonManagedKafkaEventSourceConfig']['ConsumerGroupId']
+            function_name              = function_name_from_arn (function_arn)
+
+            import kafka_rewinder as kr
+            result = kr.reset_consumer_group_offsets (function_name, topic, consumer_group, streaming_cluster_endpoint, streaming_cluster_region)
 
     else:
         updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE])
         result = updated_event_source_mappings
 
-    print (result)
+    print_result = pseq (result) \
+        .map (lambda x: function_name_from_arn (x)) \
+        .to_list ()
 
-KENABLE = 'enable'
-KPREFIX = 'prefix'
-KSUFFIX = 'suffix'
-KCONTAINS = 'contains'
-KREWIND_ONLY = 'rewind-only'
-KQUERY_ONLY = 'query'
-
-def parse_argv ():
-    argv = sys.argv[1:]
-    argc = len (argv)
-
-    # print (F'argc, argv: {argc}, {argv}')
-
-    def process_option (option, iterator):
-        match option:
-            case '--enable':
-                iterator += 1
-
-                if (argv[iterator].lower () == 'yes' or argv[iterator].lower () == 'true'):
-                    result = True
-                elif (argv[iterator].lower () == 'no' or argv[iterator].lower () == 'false'):
-                    result = False
-                else:
-                    print ('--enable must be [ yes | no | true | false ]')
-                    sys.exit (1)
-
-                return { KENABLE: result }, iterator
-
-            case '--dry' | '--query':
-                iterator += 1
-
-                return { KQUERY_ONLY: True }, iterator
-
-            case '--prefix':
-                iterator += 1
-
-                return { KPREFIX: argv[iterator] }, iterator
-
-            case '--suffix':
-                iterator += 1
-
-                return { KSUFFIX: argv[iterator] }, iterator
-
-            case '--contains':
-                iterator += 1
-
-                return { KCONTAINS: argv[iterator] }, iterator
-
-            case '--rewind-only':
-                iterator += 1
-
-                if (argv[iterator].lower () == 'yes' or argv[iterator].lower () == 'true'):
-                    result = True
-                elif (argv[iterator].lower () == 'no' or argv[iterator].lower () == 'false'):
-                    result = False
-                else:
-                    print ('--rewind-only must be [ yes | no | true | false ]')
-                    sys.exit (1)
-
-                return { KREWIND_ONLY: argv[iterator] }, iterator
-
-            case '?' | '--help' | 'help' | '__HELP__':
-                print ('--enable true | false --prefix PREFIX --suffix SUFFIX')
-                sys.exit (0)
-                return {}, iterator
-
-            case _:
-                return {}, iterator
-
-    options = {
-        KPREFIX: '',
-        KSUFFIX: '',
-        KCONTAINS: '',
-        KQUERY_ONLY: False
-    }
-
-    iterator = 0
-    while (iterator < argc):
-        try:
-
-            option, iterator = process_option (argv[iterator], iterator)
-            options = options | option
-
-            iterator += 1
-
-        except IndexError:
-
-            print (F'Option {iterator + 1} ({argv[iterator]}) requires a parameter.')
-            process_option ('?', 0)
-            sys.exit (1)
-
-    # print (options)
-
-    errors_exist = False
-    if (KENABLE not in options and KREWIND_ONLY not in options):
-        if (not options[KQUERY_ONLY]):
-            print (F'One of --enable or --rewind-only is required')
-            errors_exist = True
-
-    if (options[KPREFIX] == '' and options[KSUFFIX] == '' and options[KCONTAINS] == ''):
-        print (F'One of --prefix, --suffix, or --contains must be present')
-        errors_exist = True
-
-    if (errors_exist):
-        sys.exit (1)
-
-    return options
+    print (print_result)
 
 if (__name__ == '__main__'):
-    argv = parse_argv ()
+    argv = ap.parse_argv ()
 
     main (argv)
