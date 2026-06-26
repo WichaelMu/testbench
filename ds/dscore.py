@@ -186,6 +186,13 @@ def has_generated (program_name, key):
 
     return fexists (get_generated_path (program_name, key))
 
+def save_file (program_name, key, data):
+    ensure_generated (program_name)
+
+    generated_fq_path = get_generated_path (program_name, key)
+    with open (generated_fq_path, 'w', encoding = 'utf-8') as f:
+        f.write (data)
+
 def ensure_generated (program_name):
     if not os.path.exists (GENERATED_PARENT):
         os.makedirs (GENERATED_PARENT)
