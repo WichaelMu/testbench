@@ -72,6 +72,12 @@ def reset_consumer_group_offsets (name, topic_name, consumer_group_name, cluster
         }
 
         result = { name: reset_consumer_group (reset_consumer_group_payload) }
+        return result
 
     except Exception as e:
-        return { 'reset': str (e) }
+        return {
+            'ResetFailedError':   type (e).__name__,
+            'ResetFailedMessage': str (e),
+            'MSKTopicName':       topic_name,
+            'MSKConsumerGroup':   consumer_group_name
+        }
