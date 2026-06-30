@@ -10,7 +10,7 @@ from typing import Dict
 import dscore as dsc
 
 import argv_parser as ap
-from argv_parser import KCONTAINS, KENABLE, KPREFIX, KREWIND_ONLY, KSUFFIX, KQUERY_ONLY
+from argv_parser import KCONTAINS, KENABLE, KPREFIX, KREWIND_ONLY, KSUFFIX, KQUERY_ONLY, KSTATUS_CHECK
 
 PROGRAM_NAME = 'lambda-trigger-laziness'
 
@@ -124,6 +124,10 @@ def main (argv):
     else:
         event_source_mappings = dsc.load_generated (PROGRAM_NAME, event_source_map_key_cache)
 
+    if (argv[KSTATUS_CHECK]):
+        print (pseq (event_source_mappings).map (lambda e: { 'Function': function_name_from_arn (e['FunctionArn']), 'State': e['State'] }).to_list ())
+        return
+
     if (not dsc.has_generated (PROGRAM_NAME, event_source_details_key_cache)):
         source_mapping_details = get_event_source_mappings (lambda_client, event_source_mappings)
         dsc.save_generated (PROGRAM_NAME, event_source_details_key_cache, event_source_mappings)
@@ -136,7 +140,7 @@ def main (argv):
     if (argv.get (KREWIND_ONLY, False)):
         for smd in source_mapping_details:
             function_arn = smd['FunctionArn']
-            function_envars = pseq (ingestor_functions_lookup) \
+            function_envars = pseq (ingestor_functions) \
                 .filter (lambda f: f['FunctionArn'] == function_arn) \
                 .map (lambda f: f['Environment']['Variables']) \
                 .to_list ()[0]
@@ -148,17 +152,19 @@ def main (argv):
             function_name              = function_name_from_arn (function_arn)
 
             import kafka_rewinder as kr
-            result = kr.reset_consumer_group_offsets (function_name, topic, consumer_group, streaming_cluster_endpoint, streaming_cluster_region)
+            result.append (kr.reset_consumer_group_offsets (function_name, topic, consumer_group, streaming_cluster_endpoint, streaming_cluster_region))
+
+        print (result)
 
     else:
         updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE])
         result = updated_event_source_mappings
 
-    print_result = pseq (result) \
-        .map (lambda x: function_name_from_arn (x)) \
-        .to_list ()
+        print_result = pseq (result) \
+            .map (lambda x: function_name_from_arn (x)) \
+            .to_list ()
 
-    print (print_result)
+        print (print_result)
 
 if (__name__ == '__main__'):
     argv = ap.parse_argv ()

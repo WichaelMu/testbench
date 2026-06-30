@@ -7,6 +7,7 @@ KSUFFIX = 'suffix'
 KCONTAINS = 'contains'
 KREWIND_ONLY = 'rewind-only'
 KQUERY_ONLY = 'query'
+KSTATUS_CHECK = 'status'
 
 def parse_argv ():
     argv = sys.argv[1:]
@@ -33,6 +34,11 @@ def parse_argv ():
                 iterator += 1
 
                 return { KQUERY_ONLY: True }, iterator
+
+            case '--status':
+                iterator += 1
+
+                return { KSTATUS_CHECK: True }, iterator
 
             case '--prefix':
                 iterator += 1
@@ -74,7 +80,8 @@ def parse_argv ():
         KPREFIX: '',
         KSUFFIX: '',
         KCONTAINS: '',
-        KQUERY_ONLY: False
+        KQUERY_ONLY: False,
+        KSTATUS_CHECK: False
     }
 
     iterator = 0
