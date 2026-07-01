@@ -117,7 +117,7 @@ def main (argv):
         print (pseq (ingestor_functions).map (lambda x: x['FunctionName']).to_list ())
         return
 
-    if (not dsc.has_generated (PROGRAM_NAME, event_source_map_key_cache)):
+    if (not dsc.has_generated (PROGRAM_NAME, event_source_map_key_cache) or argv[KSTATUS_CHECK]):
         event_source_mappings = list_event_source_mappings (lambda_client, ingestor_functions)
         dsc.save_generated (PROGRAM_NAME, event_source_map_key_cache, event_source_mappings)
 
@@ -135,9 +135,9 @@ def main (argv):
     else:
         source_mapping_details = dsc.load_generated (PROGRAM_NAME, event_source_details_key_cache)
 
-    result = None
-
     if (argv.get (KREWIND_ONLY, False)):
+        result = []
+
         for smd in source_mapping_details:
             function_arn = smd['FunctionArn']
             function_envars = pseq (ingestor_functions) \
@@ -158,9 +158,8 @@ def main (argv):
 
     else:
         updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE])
-        result = updated_event_source_mappings
 
-        print_result = pseq (result) \
+        print_result = pseq (updated_event_source_mappings) \
             .map (lambda x: function_name_from_arn (x)) \
             .to_list ()
 

@@ -103,7 +103,7 @@ def parse_argv ():
 
     errors_exist = False
     if (KENABLE not in options and KREWIND_ONLY not in options):
-        if (not options[KQUERY_ONLY]):
+        if (not options[KQUERY_ONLY] and not options[KSTATUS_CHECK]):
             print (F'One of --enable or --rewind-only is required')
             errors_exist = True
 
