@@ -125,7 +125,7 @@ def main (argv):
         event_source_mappings = dsc.load_generated (PROGRAM_NAME, event_source_map_key_cache)
 
     if (argv[KSTATUS_CHECK]):
-        print (pseq (event_source_mappings).map (lambda e: { 'Function': function_name_from_arn (e['FunctionArn']), 'State': e['State'] }).to_list ())
+        print (pseq (event_source_mappings).map (lambda e: { function_name_from_arn (e['FunctionArn']): e['State'] }).to_list ())
         return
 
     if (not dsc.has_generated (PROGRAM_NAME, event_source_details_key_cache)):
