@@ -10,7 +10,7 @@ from typing import Dict
 import dscore as dsc
 
 import argv_parser as ap
-from argv_parser import KCONTAINS, KENABLE, KPREFIX, KREWIND_ONLY, KSUFFIX, KQUERY_ONLY, KSTATUS_CHECK
+from argv_parser import KCONTAINS, KENABLE, KPREFIX, KREWIND_ONLY, KSUFFIX, KQUERY_ONLY, KSTATUS_CHECK, KLAMBDA_VERSIONS_ONLY
 
 PROGRAM_NAME = 'lambda-trigger-laziness'
 
@@ -19,17 +19,43 @@ def get_lambda_client ():
     return lambda_client
 
 def list_functions (lambda_client):
-    lambda_list_functions_response = lambda_client.list_functions ()
-    lambda_functions = lambda_list_functions_response['Functions']
+        lambda_list_functions_response = lambda_client.list_functions ()
+        lambda_functions = lambda_list_functions_response['Functions']
 
-    while (lambda_list_functions_response.get ('NextMarker', '') != ''):
-        lambda_list_functions_response = lambda_client.list_functions (
-            Marker = lambda_list_functions_response['NextMarker']
-        )
+        while (lambda_list_functions_response.get ('NextMarker', '') != ''):
+            lambda_list_functions_response = lambda_client.list_functions (
+                Marker = lambda_list_functions_response['NextMarker']
+            )
 
-        lambda_functions += lambda_list_functions_response['Functions']
+            lambda_functions += lambda_list_functions_response['Functions']
 
-    return lambda_functions
+        return lambda_functions
+
+def list_lambda_function_versions (lambda_client, lambda_function_name):
+    function_key = F'lambda-versions-{lambda_function_name}'
+    if (not dsc.has_generated (PROGRAM_NAME, function_key)):
+        version_paginator = lambda_client.get_paginator ('list_versions_by_function')
+        version_iterator = version_paginator.paginate (FunctionName = lambda_function_name).build_full_result ()
+        dsc.save_generated (PROGRAM_NAME, function_key, version_iterator)
+
+    else:
+        version_iterator = dsc.load_generated (PROGRAM_NAME, function_key)
+
+    latest = seq (version_iterator['Versions']) \
+        .filter (lambda x: 'Version' in x.keys ()) \
+        .filter (lambda x: x['Version'] != '$LATEST') \
+        .filter (lambda x: 'FunctionArn' in x.keys ()) \
+        .map (lambda x: {
+            'FunctionArn': x['FunctionArn'],
+            'FunctionName': x['FunctionName']
+        }) \
+        .to_list ()
+
+    absolute_latest_include = latest[-1:]
+    if (len (absolute_latest_include) > 0):
+        return absolute_latest_include[0]
+
+    return []
 
 def filter_function_names (lambda_functions, prefix, suffix, contains):
     return pseq (lambda_functions) \
@@ -40,12 +66,12 @@ def filter_function_names (lambda_functions, prefix, suffix, contains):
 
 def list_event_source_mappings (lambda_client, lambda_functions):
     def get_individual_source_mapping (lambda_function):
-        event_source_mappings_response = lambda_client.list_event_source_mappings (FunctionName = lambda_function['FunctionName'])
+        event_source_mappings_response = lambda_client.list_event_source_mappings (FunctionName = lambda_function['FunctionArn'])
         event_source_mappings = event_source_mappings_response['EventSourceMappings']
 
         while (event_source_mappings_response.get ('NextMarker', '') != ''):
             event_source_mappings_response = lambda_client.list_event_source_mappings (
-                FunctionName = lambda_function['FunctionName'],
+                FunctionName = lambda_function['FunctionArn'],
                 Marker = event_source_mappings_response['NextMarker']
             )
 
@@ -68,15 +94,16 @@ def get_event_source_mappings (lambda_client, event_source_mappings):
 
     return event_source_mapping_responses
 
-def function_name_from_arn (arn):
-    return arn.split (':')[-1]
+def function_name_from_arn (arn, lambda_versions_only):
+    offset = -1 if not lambda_versions_only else -2
+    return arn.split (':')[offset]
 
-def update_event_source_mappings (lambda_client, event_source_mappings, should_enable):
+def update_event_source_mappings (lambda_client, event_source_mappings, should_enable, lambda_versions_only):
     def exec (esm):
         try:
             return lambda_client.update_event_source_mapping (
                 UUID = esm['UUID'],
-                FunctionName = function_name_from_arn (esm['FunctionArn']),
+                FunctionName = function_name_from_arn (esm['FunctionArn'], lambda_versions_only),
                 Enabled = should_enable
             )
         except Exception as riue:
@@ -106,6 +133,12 @@ def main (argv):
     event_source_map_key_cache = F'event-source-mappings-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
     event_source_details_key_cache = F'event-source-details-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
 
+    if (argv[KLAMBDA_VERSIONS_ONLY]):
+        lambda_functions = seq (lambda_functions) \
+            .map (lambda f: list_lambda_function_versions (lambda_client, f['FunctionName'])) \
+            .filter (lambda f: len (f) != 0) \
+            .to_list ()
+
     if (not dsc.has_generated (PROGRAM_NAME, request_key_cache)):
         ingestor_functions = filter_function_names (lambda_functions, argv[KPREFIX], argv[KSUFFIX], argv[KCONTAINS])
         dsc.save_generated (PROGRAM_NAME, request_key_cache, ingestor_functions)
@@ -125,7 +158,7 @@ def main (argv):
         event_source_mappings = dsc.load_generated (PROGRAM_NAME, event_source_map_key_cache)
 
     if (argv[KSTATUS_CHECK]):
-        print (pseq (event_source_mappings).map (lambda e: { function_name_from_arn (e['FunctionArn']): e['State'] }).to_list ())
+        print (pseq (event_source_mappings).map (lambda e: { function_name_from_arn (e['FunctionArn'], argv[KLAMBDA_VERSIONS_ONLY]): e['State'] }).to_list ())
         return
 
     if (not dsc.has_generated (PROGRAM_NAME, event_source_details_key_cache)):
@@ -149,7 +182,7 @@ def main (argv):
             streaming_cluster_region   = function_envars.get ('STREAMING_CLUSTER_REGION', 'ap-southeast-2')
             topic                      = smd['Topics'][0]
             consumer_group             = smd['AmazonManagedKafkaEventSourceConfig']['ConsumerGroupId']
-            function_name              = function_name_from_arn (function_arn)
+            function_name              = function_name_from_arn (function_arn, argv[KLAMBDA_VERSIONS_ONLY])
 
             import kafka_rewinder as kr
             result.append (kr.reset_consumer_group_offsets (function_name, topic, consumer_group, streaming_cluster_endpoint, streaming_cluster_region))
@@ -160,7 +193,7 @@ def main (argv):
         updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE])
 
         print_result = pseq (updated_event_source_mappings) \
-            .map (lambda x: function_name_from_arn (x)) \
+            .map (lambda x: function_name_from_arn (x, argv[KLAMBDA_VERSIONS_ONLY])) \
             .to_list ()
 
         print (print_result)

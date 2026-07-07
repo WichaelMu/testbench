@@ -5,6 +5,7 @@ KENABLE = 'enable'
 KPREFIX = 'prefix'
 KSUFFIX = 'suffix'
 KCONTAINS = 'contains'
+KLAMBDA_VERSIONS_ONLY = 'lambda-versions'
 KREWIND_ONLY = 'rewind-only'
 KQUERY_ONLY = 'query'
 KSTATUS_CHECK = 'status'
@@ -31,14 +32,13 @@ def parse_argv ():
                 return { KENABLE: result }, iterator
 
             case '--dry' | '--query':
-                iterator += 1
-
                 return { KQUERY_ONLY: True }, iterator
 
             case '--status':
-                iterator += 1
-
                 return { KSTATUS_CHECK: True }, iterator
+
+            case '--lambda-versions-only':
+                return { KLAMBDA_VERSIONS_ONLY: True }, iterator
 
             case '--prefix':
                 iterator += 1
@@ -81,7 +81,8 @@ def parse_argv ():
         KSUFFIX: '',
         KCONTAINS: '',
         KQUERY_ONLY: False,
-        KSTATUS_CHECK: False
+        KSTATUS_CHECK: False,
+        KLAMBDA_VERSIONS_ONLY: False
     }
 
     iterator = 0
