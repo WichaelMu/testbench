@@ -133,12 +133,6 @@ def main (argv):
     event_source_map_key_cache = F'event-source-mappings-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
     event_source_details_key_cache = F'event-source-details-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
 
-    if (argv[KLAMBDA_VERSIONS_ONLY]):
-        lambda_functions = seq (lambda_functions) \
-            .map (lambda f: list_lambda_function_versions (lambda_client, f['FunctionName'])) \
-            .filter (lambda f: len (f) != 0) \
-            .to_list ()
-
     if (not dsc.has_generated (PROGRAM_NAME, request_key_cache)):
         ingestor_functions = filter_function_names (lambda_functions, argv[KPREFIX], argv[KSUFFIX], argv[KCONTAINS])
         dsc.save_generated (PROGRAM_NAME, request_key_cache, ingestor_functions)
@@ -146,9 +140,11 @@ def main (argv):
     else:
         ingestor_functions = dsc.load_generated (PROGRAM_NAME, request_key_cache)
 
-    if (argv[KQUERY_ONLY]):
-        print (pseq (ingestor_functions).map (lambda x: x['FunctionName']).to_list ())
-        return
+    if (argv[KLAMBDA_VERSIONS_ONLY]):
+        ingestor_functions = seq (ingestor_functions) \
+            .map (lambda f: list_lambda_function_versions (lambda_client, f['FunctionName'])) \
+            .filter (lambda f: len (f) != 0) \
+            .to_list ()
 
     if (not dsc.has_generated (PROGRAM_NAME, event_source_map_key_cache) or argv[KSTATUS_CHECK]):
         event_source_mappings = list_event_source_mappings (lambda_client, ingestor_functions)
@@ -156,6 +152,10 @@ def main (argv):
 
     else:
         event_source_mappings = dsc.load_generated (PROGRAM_NAME, event_source_map_key_cache)
+
+    if (argv[KQUERY_ONLY]):
+        print (pseq (ingestor_functions).map (lambda x: x['FunctionName']).to_list ())
+        return
 
     if (argv[KSTATUS_CHECK]):
         print (pseq (event_source_mappings).map (lambda e: { function_name_from_arn (e['FunctionArn'], argv[KLAMBDA_VERSIONS_ONLY]): e['State'] }).to_list ())
@@ -190,7 +190,7 @@ def main (argv):
         print (result)
 
     else:
-        updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE])
+        updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE], argv[KLAMBDA_VERSIONS_ONLY])
 
         print_result = pseq (updated_event_source_mappings) \
             .map (lambda x: function_name_from_arn (x, argv[KLAMBDA_VERSIONS_ONLY])) \
