@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import math
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+try:
+    import hcl2
+    from hcl2 import SerializationOptions
+except ImportError:
+    print (
+        'tfjson: missing dependency \'python-hcl2\'\n'
+        'Install it with:\n'
+        '  python3 -m pip install --user python-hcl2',
+        file = sys.stderr,
+    )
+    raise SystemExit (2)
+
+
+IDENTIFIER = re.compile (R'^[A-Za-z_][A-Za-z0-9_-]*$')
+
+
+class TfjsonError (ValueError):
+    pass
+
+def read_input (path):
+    if path is None or path == '-':
+        return sys.stdin.read ()
+    return Path (path).read_text (encoding = 'utf-8')
+
+def hcl_options ():
+    return SerializationOptions (
+        with_comments       = False,
+        with_meta           = False,
+        wrap_objects        = False,
+        wrap_tuples         = False,
+        explicit_blocks     = False,
+        preserve_heredocs   = False,
+        strip_string_quotes = True
+    )
+
+def parse_json (source):
+    return json.loads (source)
+
+def parse_hcl_body (source):
+    value = hcl2.loads (source, serialization_options = hcl_options ())
+    if not isinstance (value, dict):
+        raise TfjsonError ('HCL parser did not return an object')
+    return value
+
+def parse_hcl_expression (source):
+    wrapped = '__tfjson_value__ = ' + source
+    parsed = hcl2.loads (wrapped, serialization_options = hcl_options ())
+    if '__tfjson_value__' not in parsed:
+        raise TfjsonError ('input did not contain a Terraform/HCL value')
+    return parsed['__tfjson_value__']
+
+def parse_hcl_any (source):
+    try:
+        return 'body', parse_hcl_body (source)
+    except Exception as body_error:
+        try:
+            return 'expression', parse_hcl_expression (source)
+        except Exception as expression_error:
+            raise TfjsonError (
+                'input is neither valid JSON nor valid Terraform/HCL: '
+                F'{expression_error or body_error}'
+            ) from expression_error
+
+def parse_input_for_encode (source):
+    try:
+        return parse_json (source)
+    except json.JSONDecodeError:
+        _, value = parse_hcl_any (source)
+        return value
+
+def quote_hcl_string (value):
+    escaped = json.dumps (value, ensure_ascii = False)
+    return escaped.replace ('${', '$${').replace ('%{', '%%{')
+
+def hcl_key (key):
+    return key if IDENTIFIER.fullmatch (key) else quote_hcl_string (key)
+
+def to_hcl_value (value, indent = 0):
+    pad = ' ' * indent
+    child_pad = ' ' * (indent + 2)
+
+    if value is None:
+        return 'null'
+    if value is True:
+        return 'true'
+    if value is False:
+        return 'false'
+    if isinstance (value, str):
+        return quote_hcl_string (value)
+    if isinstance (value, int) and not isinstance (value, bool):
+        return str (value)
+    if isinstance (value, float):
+        if not math.isfinite (value):
+            raise TfjsonError ('JSON NaN and infinity are not valid Terraform numbers')
+        return json.dumps (value)
+    if isinstance (value, list):
+        if not value:
+            return '[]'
+        lines = [F'{child_pad}{to_hcl_value (item, indent + 2)},' for item in value]
+        return '[\n' + '\n'.join (lines) + F'\n{pad}]'
+    if isinstance (value, dict):
+        if not value:
+            return '{}'
+        width = max (len (hcl_key (str (key))) for key in value)
+        lines = []
+        for key, item in value.items ():
+            rendered_key = hcl_key (str (key))
+            rendered_value = to_hcl_value (item, indent + 2)
+            lines.append (F'{child_pad}{rendered_key.ljust (width)} = {rendered_value}')
+        return '{\n' + '\n'.join (lines) + F'\n{pad}}}'
+
+    raise TfjsonError (F'unsupported value type: {type (value).__name__}')
+
+def to_hcl_document (value):
+    if not isinstance (value, dict):
+        return to_hcl_value (value)
+    if not value:
+        return ''
+
+    width = max (len (hcl_key (str (key))) for key in value)
+    lines = []
+    for key, item in value.items ():
+        rendered_key = hcl_key (str (key))
+        rendered_value = to_hcl_value (item, 0)
+        lines.append (F'{rendered_key.ljust (width)} = {rendered_value}')
+    return '\n'.join (lines)
+
+def encode (source, compact):
+    value = parse_input_for_encode (source)
+    if compact:
+        return json.dumps (value, ensure_ascii = False, separators=(',', ':')) + '\n'
+    return json.dumps (value, ensure_ascii = False, indent = 2) + '\n'
+
+def decode (source):
+    try:
+        value = parse_json (source)
+        return to_hcl_document (value) + '\n'
+    except json.JSONDecodeError:
+        parse_hcl_any (source)
+        return source if source.endswith ('\n') else source + '\n'
+
+def build_parser ():
+    parser = argparse.ArgumentParser (
+        prog = 'tfjson',
+        description = 'Convert Terraform/HCL to JSON, or JSON to Terraform/HCL.',
+    )
+    parser.add_argument ('--in', dest = 'input_file', help = 'read input from this file')
+    mode = parser.add_mutually_exclusive_group (required = True)
+    mode.add_argument ('--encode', action = 'store_true', help = 'convert input to JSON')
+    mode.add_argument ('--decode', action = 'store_true', help = 'convert input to Terraform/HCL')
+    parser.add_argument ('--compact', action = 'store_true', help = 'emit compact JSON with --encode')
+    return parser
+
+def main () -> int:
+    args = build_parser ().parse_args ()
+
+    try:
+        source = read_input (args.input_file)
+        if args.encode:
+            sys.stdout.write (encode (source, args.compact))
+        else:
+            sys.stdout.write (decode (source))
+        return 0
+    except (OSError, TfjsonError, TypeError, json.JSONDecodeError) as exc:
+        print (F'tfjson: {exc}', file = sys.stderr)
+        return 1
+
+if __name__ == '__main__':
+    raise SystemExit (main ())
