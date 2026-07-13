@@ -47,7 +47,8 @@ def list_lambda_function_versions (lambda_client, lambda_function_name):
         .filter (lambda x: 'FunctionArn' in x.keys ()) \
         .map (lambda x: {
             'FunctionArn': x['FunctionArn'],
-            'FunctionName': x['FunctionName']
+            'FunctionName': x['FunctionName'],
+            'Environment': x['Environment']
         }) \
         .to_list ()
 
@@ -103,7 +104,7 @@ def update_event_source_mappings (lambda_client, event_source_mappings, should_e
         try:
             return lambda_client.update_event_source_mapping (
                 UUID = esm['UUID'],
-                FunctionName = function_name_from_arn (esm['FunctionArn'], lambda_versions_only),
+                # FunctionName = esm['FunctionArn'],
                 Enabled = should_enable
             )
         except Exception as riue:
@@ -114,6 +115,7 @@ def update_event_source_mappings (lambda_client, event_source_mappings, should_e
 
     update_response = seq (event_source_mappings) \
         .map (lambda esm: exec (esm)) \
+        .filter (lambda ex: 'FunctionArn' in ex) \
         .map (lambda esm: esm['FunctionArn']) \
         .to_list ()
 
@@ -129,9 +131,9 @@ def main (argv):
     else:
         lambda_functions = dsc.load_generated (PROGRAM_NAME, 'lambda-functions')
 
-    request_key_cache = F'ingestor-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
-    event_source_map_key_cache = F'event-source-mappings-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
-    event_source_details_key_cache = F'event-source-details-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
+    request_key_cache = F'ingestor-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}-{argv[KLAMBDA_VERSIONS_ONLY]}'
+    event_source_map_key_cache = F'event-source-mappings-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}-{argv[KLAMBDA_VERSIONS_ONLY]}'
+    event_source_details_key_cache = F'event-source-details-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}-{argv[KLAMBDA_VERSIONS_ONLY]}'
 
     if (not dsc.has_generated (PROGRAM_NAME, request_key_cache)):
         ingestor_functions = filter_function_names (lambda_functions, argv[KPREFIX], argv[KSUFFIX], argv[KCONTAINS])
@@ -163,7 +165,7 @@ def main (argv):
 
     if (not dsc.has_generated (PROGRAM_NAME, event_source_details_key_cache)):
         source_mapping_details = get_event_source_mappings (lambda_client, event_source_mappings)
-        dsc.save_generated (PROGRAM_NAME, event_source_details_key_cache, event_source_mappings)
+        dsc.save_generated (PROGRAM_NAME, event_source_details_key_cache, source_mapping_details)
 
     else:
         source_mapping_details = dsc.load_generated (PROGRAM_NAME, event_source_details_key_cache)
@@ -174,7 +176,7 @@ def main (argv):
         for smd in source_mapping_details:
             function_arn = smd['FunctionArn']
             function_envars = pseq (ingestor_functions) \
-                .filter (lambda f: f['FunctionArn'] == function_arn) \
+                .filter (lambda f: function_name_from_arn (f['FunctionArn'], argv[KLAMBDA_VERSIONS_ONLY]) == function_name_from_arn (function_arn, argv[KLAMBDA_VERSIONS_ONLY])) \
                 .map (lambda f: f['Environment']['Variables']) \
                 .to_list ()[0]
 
