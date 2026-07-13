@@ -72,7 +72,7 @@ def reset_consumer_group_offsets (name, topic_name, consumer_group_name, cluster
         }
 
         result = { name: reset_consumer_group (reset_consumer_group_payload) }
-        return result
+        return consumer_group_name
 
     except Exception as e:
         return {
