@@ -172,3 +172,4 @@ mcrypt/mcrypt
 **secrets**
 **generated/**
 **/generated/**
+**/inputs/**
