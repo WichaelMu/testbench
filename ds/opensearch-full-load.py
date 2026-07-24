@@ -33,13 +33,17 @@ from requests_oauth2client import OAuth2ClientCredentialsAuth
 from requests_oauth2client import ApiClient
 
 import dscore as dsc
-import log_event_module as lem
-from functional import pseq
+import py_log_event_module as lem
+from functional import pseq, seq
 
-ITEM_LIMIT = int (os.environ.get ('ITEM_LIMIT', 64))
+ITEM_LIMIT = int (os.environ.get ('ITEM_LIMIT', 32))
 
 PROGRAM_NAME = 'opensearch-full-load'
 
+envars = dsc.load_json ('secrets.json')['OPENSEARCH']['NONPROD']
+os.environ.update (envars)
+
+contains_whitespaces = []
 not_processable_courses = []
 not_processable_subjects = []
 not_processable_substructures = []
@@ -62,12 +66,26 @@ def is_processable (thing):
 
     return False
 
+def whitespace_check (code, entity_type):
+    if (code != code.strip ()):
+        lem.warning (F'{entity_type} code: {code} was written by someone who may have accidentally fat fingered the spacebar. the spacebar is the long, flat, horizontal key typically positioned at the bottom centre of the keyboard, regardless of keyboard layout or format; it is the biggest key on the keyboard and is universally recognisable, so it is easy to accidentally press. as a side effect, if it is easy to accidentally press, it should also be easy to avoid pressing it. it will have its leading and trailing whitespaces marked for termination and be hunted down and defeated.')
+
+        global contains_whitespaces
+        contains_whitespaces += code
+
+    return code.strip ()
+
 def matches_course_code_format (dict):
-    code = dict['code']
+    code = dict.get ('code', None)
+
+    if (code is not None):
+        code = whitespace_check (code, 'course')
+        dict['code'] = code
+
     if (not is_processable (code)):
-        lem.exception ('deer oh deer. this code is not processable :(')
         global not_processable_courses
         not_processable_courses.append (dict)
+
         return False
 
     match re.match (r'^C[0-9]{5}$', code):
@@ -78,11 +96,16 @@ def matches_course_code_format (dict):
             return True
 
 def matches_subject_code_format (dict):
-    code = dict['code']
+    code = dict.get ('code', None)
+
+    if (code is not None):
+        code = whitespace_check (code, 'subject')
+        dict['code'] = code
+
     if (not is_processable (code)):
-        lem.exception ('deer oh deer. this code is not processable :(')
         global not_processable_subjects
         not_processable_subjects.append (dict)
+
         return False
 
     match re.match (r'^[0-9]{5,6}$', code):
@@ -93,11 +116,16 @@ def matches_subject_code_format (dict):
             return True
 
 def matches_substructure_code_format (dict):
-    code = dict['code']
+    code = dict.get ('code', None)
+
+    if (code is not None):
+        code = whitespace_check (code, 'substructure')
+        dict['code'] = code
+
     if (not is_processable (code)):
-        lem.exception ('deer oh deer. this code is not processable :(')
         global not_processable_substructures
         not_processable_substructures.append (dict)
+
         return False
 
     match re.match (r'^(MAJ|SMJ|STM|CBK)[0-9]{5}$', code):
@@ -110,14 +138,17 @@ def matches_substructure_code_format (dict):
 def bulk_download (api, entity_name, page = 1, limit = ITEM_LIMIT):
     try:
         # &sort=sys_created_on,sys_id
-        lem.info (f"sending request=/{entity_name}?page={page}&limit={limit}&sort=sys_created_on,sys_id")
-        response = api.get (f"/{entity_name}?page={page}&limit={limit}&sort=sys_created_on,sys_id")
+        lem.info (f"sending request=/{entity_name}?page={page}&limit={limit}")
+        response = api.get (f"/{entity_name}?page={page}&limit={limit}")
         lem.info (f"response={response}")
         
         response = orjson.loads (response.text)
 
     except Exception as x:
-        lem.error (f"encountered error: {x}")
+        lem.error (f"encountered error during request: {x}")
+
+        if ('meta' in response.keys () and 'hasNext' in response['meta'].keys ()):
+            return response['meta']['hasNext'], {}
 
         return (False, {})
 
@@ -136,10 +167,13 @@ def bulk_download (api, entity_name, page = 1, limit = ITEM_LIMIT):
                 cleansed_response = response['data']
 
     except Exception as e:
-        lem.error (F"encountered during filtering. error: {x}")
-        lem.error (F"attempting to skip and continue processing...")
+        lem.error (F'encountered error during cleansing: {e}')
+        lem.info ('will try to continue after error during cleansing...')
 
-    return (response['meta']['hasNext'], cleansed_response)
+    if ('meta' in response and 'hasNext' in response['meta']):
+        return (response['meta']['hasNext'], cleansed_response)
+
+    return False, cleansed_response
 
 def get_secret_envar_name ():
     return 'SECRET_NAME'
@@ -157,7 +191,7 @@ def render_error_with_message (error_message, status_code = '500'):
     return {
         'statusCode': status_code,
         'headers': {
-            'Content-Type': 'application/orjson'
+            'Content-Type': 'application/json'
         },
         'level': 'ERROR',
         'message': error_message
@@ -189,7 +223,7 @@ def get_secret (secret_name, secret_stage = None):
         lem.info (f"{secret_name} secret value obtained")
 
     except ClientError:
-        lem.exception (F"could not obtain the value in secret {secret_name}", )
+        lem.exception (F"could not obtain the value in secret {secret_name}")
         
         raise
     else:
@@ -243,6 +277,33 @@ def cleanse_input_text (text):
 
         return tom_yum.get_text ()
     except Exception as x:
+        return None
+
+def text_to_embeddings_via_bedrock (text, dimensions = 1024, bedrock_model_id = os.environ[get_bedrock_model_id_envar ()]):
+    try:
+        bedrock_runtime = boto3.client (service_name = 'bedrock-runtime', region_name = os.environ[get_bedrock_model_region_envar ()])
+
+        bedrock_model_input = {
+            'inputText': cleanse_input_text (text),
+            'dimensions': dimensions,
+            'normalize': True
+        }
+
+        content_type = 'application/json'
+        
+        bedrock_request = orjson.dumps (bedrock_model_input)
+
+        bedrock_response = bedrock_runtime.invoke_model (body = bedrock_request,
+                                                         modelId = bedrock_model_id,
+                                                         accept = content_type,
+                                                         contentType = content_type)
+        
+        body = orjson.loads (bedrock_response.get ('body').read ())
+        
+        return body.get ("embedding")
+
+    except Exception as x:
+        lem.error (render_error_with_message (x))
         return None
 
 def try_get_value (item_dict, key):
@@ -311,7 +372,7 @@ def tokenise_event (item, entity_name):
                 case list ():
                     item['outcomes_vector'] = outcomes_vector
                 case None:
-                  lem.warning (f'course code={item["code"]} shall regrettably be devoid of any delineated learning outcomes')
+                    lem.warning (f'course code={item["code"]} shall regrettably be devoid of any delineated learning outcomes')
 
     # Subjects only
     if try_get_value (item, 'subject_learning_outcome') is not None:
@@ -325,7 +386,7 @@ def tokenise_event (item, entity_name):
                 case list ():
                     item['outcomes_vector'] = subject_learning_outcomes_embeddings
                 case _:
-                  lem.warning (f'subject code={item["code"]}: shall regrettably be devoid of any delineated learning outcomes')
+                    lem.warning (f'subject code={item["code"]}: shall regrettably be devoid of any delineated learning outcomes')
 
     # Subjects only
     if try_get_value (item, 'learning_approach') is not None:
@@ -339,7 +400,7 @@ def tokenise_event (item, entity_name):
                 case list ():
                     item['approach_vector'] = learning_approach_embeddings
                 case _:
-                  lem.warning (f'subject code={item["code"]}: shall regrettably be devoid of any meaningful learning approach')
+                    lem.warning (f'subject code={item["code"]}: shall regrettably be devoid of any meaningful learning approach')
 
     try:
         orjson.dumps (item)
@@ -390,14 +451,23 @@ async def consign_knn_event (event, oauth2_token, session, entity_name, headers)
     # Persist the event into the KNN index first
     lem.info (f'consigning {event["code"]} with sys_id {event_id} into {entity_name}_knn')
 
-    try:
-        async with session.put (knn_index_endpoint, headers = headers, data = orjson.dumps (event)) as response:
-            response.raise_for_status ()
-        
-            return await response.text ()
+    attempts = 0
+    max_attempts = 10
+    while (attempts < max_attempts):
+        try:
+            async with session.put (knn_index_endpoint, headers = headers, data = orjson.dumps (event)) as response:
+                response.raise_for_status ()
+            
+                return await response.text ()
 
-    except Exception as x:
-        lem.error (render_error_with_message (x))
+        except Exception as x:
+            attempts += 1
+            if (attempts == max_attempts):
+                lem.error (render_error_with_message (x))
+
+            else:
+                import time
+                time.sleep (5)
 
     return
 
@@ -448,11 +518,12 @@ async def event_dispatcher (events, entity_name, headers):
 
 def purge_index (entity_name):
     lem.info (f'purging the {entity_name} index')
+
     opensearch_client = ApiClient (f'https://{os.environ[get_os_endpoint_url_envar_name ()]}')
 
     opensearch_client.post (f'/{entity_name}/_delete_by_query',
                            headers = {
-                               'Content-Type': 'application/orjson; charset=utf-8'
+                               'Content-Type': 'application/json; charset=utf-8'
                            },
                            data = orjson.dumps ({
                                'query': {
@@ -522,11 +593,27 @@ def lambda_handler (event, context):
             page = 1
 
             receiver = []
+            generated_key = F'{os.environ['ENV']}-grab-courseloop-{entity_name}'
+            loaded_events = None
+
+            if (os.environ.get ('KALI', '') and dsc.has_generated (PROGRAM_NAME, generated_key)):
+                loaded_events = dsc.load_generated (PROGRAM_NAME, generated_key)
+                loaded_events = list (seq (loaded_events).grouped (ITEM_LIMIT * 4))
+
+                page = 0
+
             total_event_count = 0
 
             while has_next_flag == True:
-                has_next_flag, events = bulk_download (cl_api, entity_name, page)
+                if (os.environ.get ('KALI', '') and loaded_events is not None):
+                    if (page < len (loaded_events)):
+                        events = loaded_events[page]
+                    else:
+                        break
 
+                else:
+                    has_next_flag, events = bulk_download (cl_api, entity_name, page)
+                
                 page += 1
 
                 future_events = asyncio.run (tokenise_events (events, entity_name))
@@ -534,13 +621,12 @@ def lambda_handler (event, context):
                 lem.info (f'gathered {len (future_events)} events')
 
                 total_event_count += len (future_events)
-                total_event_count += len (events)
                 receiver += events
 
                 loop.run_until_complete (event_dispatcher (events = future_events,
                                                            entity_name = entity_name,
                                                            headers = {
-                                                               'Content-Type': 'application/orjson; charset=utf-8'
+                                                               'Content-Type': 'application/json; charset=utf-8'
                                                            }))
 
             lem.info (f'{entity_name} summary: {total_event_count} academic items furnished into OpenSearch')
@@ -557,18 +643,16 @@ def lambda_handler (event, context):
         'statusCode': '200',
 
         'headers': {
-            'Content-Type': 'application/orjson'
+            'Content-Type': 'application/json'
         }
     }
 
 if (__name__ == '__main__'):
     correlation_id, start_time = lem.init_logger ('opensearch-full-load')
 
-    envars = dsc.load_json ('secrets.json')['OPENSEARCH']['NONPROD']
-    os.environ.update (envars)
-
     lambda_handler ({}, {})
 
     dsc.save_generated (PROGRAM_NAME, 'unprocessable-courses', not_processable_courses)
     dsc.save_generated (PROGRAM_NAME, 'unprocessable-subjects', not_processable_subjects)
     dsc.save_generated (PROGRAM_NAME, 'unprocessable-substructures', not_processable_substructures)
+    dsc.save_generated (PROGRAM_NAME, 'contains-whitespaces', contains_whitespaces)
