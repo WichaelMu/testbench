@@ -15,6 +15,9 @@ def get_secret_stuff ():
     authorisation_headers = { 'Authorization': F'Bearer {access_token}' }
     return authorisation_headers
 
+def vet (response, what):
+    return 'code' in response and what in response['code']
+
 def grab_courseloop (what):
     generated_key = F'grab-courseloop-{what}'
     if (dsc.has_generated (PROGRAM_NAME, generated_key)):
@@ -22,7 +25,7 @@ def grab_courseloop (what):
 
     headers         = get_secret_stuff ()
     base_url        = 'https://uts-clapi.uat.courseloop.com'
-    initial_request = requests.get (F'{base_url}/{what}', headers = headers)
+    initial_request = requests.get (F'{base_url}/{what}?limit=32', headers = headers)
 
     response     = initial_request.json ()
     return_value = response['data']
