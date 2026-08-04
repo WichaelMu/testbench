@@ -18,6 +18,7 @@ class MCrypt
 
 	static int Main (string[] args)
 	{
+		ConfigureTerminalForMono ();
 		Settings = ParseCommandLineArguments (args);
 
 		Dbg ("Verifying Arguments...");
@@ -71,6 +72,16 @@ class MCrypt
 
 		Dbg ("Terminate with 0.");
 		return 0;
+	}
+
+	static void ConfigureTerminalForMono ()
+	{
+#if LINUX
+		// Mono 6.14 cannot load Kali's xterm-256color terminfo entry because it
+		// exceeds Mono's 4 KiB limit. This program only needs basic ANSI colours.
+		if (Environment.GetEnvironmentVariable ("TERM") == "xterm-256color")
+			Environment.SetEnvironmentVariable ("TERM", "xterm-color");
+#endif
 	}
 
 	static int EncryptMultiple (string[] InputPaths, string OutputPath, string Password)

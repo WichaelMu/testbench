@@ -5,6 +5,10 @@ DEFINES=()
 OUT_FILE=""
 SOURCE_FILES=()
 NO_AOT_FLAG=0
+# Mono 6.14's TermInfoReader rejects the current xterm-256color entry because
+# its compiled terminfo file is larger than 4 KiB.  Limit only Mono's child
+# processes to a widely available, small terminal definition.
+MONO_TERM="${CSCOMPILE_TERM:-xterm-color}"
 
 usage() {
   echo "Usage: $0 [--define DEFINE1,DEFINE2,...] [--no-aot] --out OUTFILE --source FILE1.cs [FILE2.cs ...]"
@@ -99,10 +103,9 @@ fi
 
 echo "Compiling ${SOURCE_FILES[*]} to $OUT_FILE..."
 set -x
-mcs -out:"$OUT_FILE" -optimize+ $DEFINE_ARG "${SOURCE_FILES[@]}"
-set +x
-
+TERM="$MONO_TERM" mcs -out:"$OUT_FILE" -optimize+ $DEFINE_ARG "${SOURCE_FILES[@]}"
 EXIT_CODE=$?
+set +x
 
 if [[ $EXIT_CODE -ne 0 ]]; then
   echo "Build failed."
@@ -119,8 +122,8 @@ fi
 
 # --- Mono AOT (Ahead-Of-Time) compile ---
 if command -v mono >/dev/null 2>&1; then
-  echo "AOT-compiling with: mono --aot=full \"$OUT_FILE\" ..."
-  if mono --aot=full "$OUT_FILE"; then
+	echo "AOT-compiling with: mono --aot=full \"$OUT_FILE\" ..."
+	if TERM="$MONO_TERM" mono --aot=full "$OUT_FILE"; then
     if [[ -f "${OUT_FILE}.so" ]]; then
       strip -s "${OUT_FILE}.so" 2>/dev/null || true
     fi
