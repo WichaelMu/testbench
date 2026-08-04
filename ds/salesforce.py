@@ -37,17 +37,17 @@ def get_object_fields (sf_context, object_api_name):
 def exec ():
     sf_context = salesforce_context ('')
 
-    fields = get_object_fields (sf_context, 'Contact')
+    qobject = 'Party__c'
+    fields = get_object_fields (sf_context, qobject)
 
-    # fields_to_grab = [ 'Name', 'Email' ]
+    # fields_to_grab = [ 'Name', 'Email__c' ]
     get_object_rows (
         sf_context,
-        object_api_name = 'Contact',
+        object_api_name = qobject,
         fields = fields,
         where_equals = {
-            'UTSID__c': '13938903'
+            'StudentId__c': '28092020'
         },
-        fetch_all = True
     )
 
 if (__name__ == '__main__'):

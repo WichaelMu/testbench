@@ -9,7 +9,9 @@ import urllib.parse
 
 import py_log_event_module as lem
 
-from simple_salesforce import Salesforce
+from simple_salesforce.api import Salesforce
+from simple_salesforce.exceptions import SalesforceError, SalesforceResourceNotFound
+from simple_salesforce.format import format_external_id
 import email_validator as ev
 
 
@@ -18,10 +20,16 @@ OBJECT_CREATED = 'OBJECT_CREATED'
 FIELD_EXISTS   = 'FIELD_EXISTS'
 FIELD_CREATED  = 'FIELD_CREATED'
 FIELD_FAILED   = 'FIELD_FAILED'
+SALESFORCE_REQUEST_TIMEOUT_SECONDS = 30
 
 
 class StandardFieldIsNonExistent (Exception):
     pass
+
+class SalesforceRequestSession (requests.Session):
+    def request (self, method, url, **kwargs):
+        kwargs.setdefault ('timeout', SALESFORCE_REQUEST_TIMEOUT_SECONDS)
+        return super ().request (method, url, **kwargs)
 
 def get_secret_stuff ():
     secret_name = os.environ['SECRET_NAME']
@@ -58,7 +66,8 @@ def setup_salesforce_connection (correlation_id):
             'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
             'assertion': assertion
         },
-        timeout = 30
+        # https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_jwt_flow.htm&type=5
+        timeout = SALESFORCE_REQUEST_TIMEOUT_SECONDS
     )
 
     if (not response.ok):
@@ -95,10 +104,14 @@ def create_simple_salesforce_client (instance_url, access_token, api_version ):
     salesforce_client = Salesforce (
         instance_url = instance_url,
         session_id   = access_token,
-        version      = simple_salesforce_api_version
+        version      = simple_salesforce_api_version,
+        session      = SalesforceRequestSession ()
     )
 
     return salesforce_client
+
+def get_simple_salesforce_object (salesforce_client, object_api_name):
+    return getattr (salesforce_client, object_api_name)
 
 def pascal_case (value):
     parts = re.split (R'[^A-Za-z0-9]+|_', value)
@@ -113,7 +126,7 @@ def pascal_case (value):
 
     return ''.join (clean_parts)
 
-def is_email (value):
+def is_email (correlation_id, reference_id, value):
     if (not isinstance (value, str)):
         return False
 
@@ -123,8 +136,8 @@ def is_email (value):
 
     except ev.EmailSyntaxError as ese:
         lem.print (
-            correlationId  = '',
-            referenceId    = '',
+            correlationId  = correlation_id,
+            referenceId    = reference_id,
             message        = F'Email validation failed.',
             status         = 'FAILED',
             tracepoint     = 'END',
@@ -144,8 +157,8 @@ def is_email (value):
 
     except Exception as e:
         lem.print (
-            correlationId  = '',
-            referenceId    = '',
+            correlationId  = correlation_id,
+            referenceId    = reference_id,
             message        = F'Email validation faced an error.',
             status         = 'FAILED',
             tracepoint     = 'END',
@@ -220,86 +233,51 @@ def flatten_schema (schema, prefix = None):
 
     return fields
 
-def salesforce_execute_request (method, instance_url, access_token, path, body = None):
-    response = requests.request (
-        method,
-        F'{instance_url.rstrip ("/")}{path}',
-        headers = {
-            'Authorization': F'Bearer {access_token}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        json = body,
-        timeout = 60
-    )
-
-    if (response.status_code >= 400):
-        error_text = response.json ()
-
-        if (error_text.get ('errorCode') == 'DUPLICATE_DEVELOPER_NAME'):
-            return None
-
-        lem.print (
-            correlationId  = '',
-            referenceId    = '',
-            message        = F'Salesforce error.',
-            status         = 'FAILED',
-            tracepoint     = '',
-            source         = '',
-            target         = '',
-            action         = '',
-            resource       = '',
-            elapsedTime    = lem.delta_time (),
-            meta           = {
-                'method:': method,
-                'path:': path,
-                'status:': response.status_code,
-                'body:': error_text
-            }
-        )
-
-        response.raise_for_status ()
-
-    if (response.text.strip () == ''):
-        return None
-
-    return response.json ()
-
 def object_exists (instance_url, access_token, object_api_name, api_version):
-    response = requests.get (
-        F'{instance_url.rstrip ("/")}/services/data/{api_version}/sobjects/{object_api_name}/describe',
-        headers = {
-            'Authorization': F'Bearer {access_token}',
-            'Accept': 'application/json'
-        },
-        timeout = 30
-    )
-
-    if (response.status_code == 200):
-        return True
-
-    if (response.status_code == 404):
-        return False
-
-    response.raise_for_status ()
-
-    return False
-
-def field_exists (instance_url, access_token, object_api_name, field_api_name, api_version):
-    if (not object_exists (instance_url, access_token, object_api_name, api_version)):
-        return False
-
-    description = salesforce_execute_request (
-        'GET',
+    salesforce_client = create_simple_salesforce_client (
         instance_url,
         access_token,
-        F'/services/data/{api_version}/sobjects/{object_api_name}/describe'
+        api_version
     )
 
-    if (description is not None and isinstance (description, dict)):
-        for field in description['fields']:
-            if (field['name'] == field_api_name):
-                return True
+    salesforce_object = get_simple_salesforce_object (
+        salesforce_client,
+        object_api_name
+    )
+
+    try:
+        # Salesforce sObject Describe documentation:
+        # https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_sobject_describe.htm
+        salesforce_object.describe ()
+
+    except SalesforceResourceNotFound:
+        return False
+
+    return True
+
+def field_exists (correlation_id, reference_id, instance_url, access_token, object_api_name, field_api_name, api_version):
+    salesforce_client = create_simple_salesforce_client (
+        instance_url,
+        access_token,
+        api_version
+    )
+
+    salesforce_object = get_simple_salesforce_object (
+        salesforce_client,
+        object_api_name
+    )
+
+    try:
+        # Salesforce sObject Describe documentation:
+        # https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_sobject_describe.htm
+        description = salesforce_object.describe ()
+
+    except SalesforceResourceNotFound:
+        return False
+
+    for field in description.get ('fields', []):
+        if (field.get ('name') == field_api_name):
+            return True
 
     return False
 
@@ -308,9 +286,7 @@ def hoomanise_salesforce_api_name (api_name):
         return 'Name'
 
     label = re.sub (R'__c$', '', api_name)
-
     label = re.sub (R'([a-z0-9])([A-Z])', R'\1 \2', label)
-
     label = label.replace ('_', ' ')
 
     return label.strip ()
@@ -507,6 +483,41 @@ def field_metadata_from_spec (field_api_name, spec):
 
     return metadata
 
+def create_simple_salesforce_custom_field_metadata (sf_mdapi, object_api_name, field_api_name, metadata):
+    # https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/customfield.htm
+    custom_field_metadata = dict (metadata)
+
+    custom_field_metadata['fullName'] = F'{object_api_name}.{field_api_name}'
+    custom_field_metadata['type'] = sf_mdapi.FieldType (
+        custom_field_metadata['type']
+    )
+
+    if ('deleteConstraint' in custom_field_metadata):
+        custom_field_metadata['deleteConstraint'] = sf_mdapi.DeleteConstraint (
+            custom_field_metadata['deleteConstraint']
+        )
+
+    if ('valueSet' in custom_field_metadata):
+        value_set_metadata = custom_field_metadata['valueSet']
+        value_set_definition_metadata = value_set_metadata['valueSetDefinition']
+
+        values = [
+            sf_mdapi.CustomValue (**value)
+            for value in value_set_definition_metadata.get ('value', [])
+        ]
+
+        value_set_definition = sf_mdapi.ValueSetValuesDefinition (
+            sorted = value_set_definition_metadata.get ('sorted', False),
+            value  = values
+        )
+
+        custom_field_metadata['valueSet'] = sf_mdapi.ValueSet (
+            restricted         = value_set_metadata.get ('restricted', False),
+            valueSetDefinition = value_set_definition
+        )
+
+    return sf_mdapi.CustomField (**custom_field_metadata)
+
 def create_custom_object (instance_url, access_token, object_api_name, label, plural_label, api_version):
     if (object_exists (instance_url, access_token, object_api_name, api_version)):
         lem.info (F'Object already exists: {object_api_name}')
@@ -528,36 +539,63 @@ def create_custom_object (instance_url, access_token, object_api_name, label, pl
             label   = 'Name',
             type    = sf_mdapi.FieldType ('Text')
         ),
+        enableSearch     = True,
         deploymentStatus = sf_mdapi.DeploymentStatus ('Deployed'),
-        sharingModel = sf_mdapi.SharingModel ('ReadWrite')
+        sharingModel     = sf_mdapi.SharingModel ('ReadWrite')
     )
 
-    result = sf_mdapi.CustomObject.create (custom_object)
+    # https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_createMetadata.htm
+    sf_mdapi.CustomObject.create (custom_object)
 
     lem.info (F'Created object: {object_api_name}')
     return OBJECT_CREATED
 
-def create_custom_field (instance_url, access_token, object_api_name, field_api_name, metadata, api_version):
-    if (field_exists (instance_url, access_token, object_api_name, field_api_name, api_version)):
+def create_custom_field (correlation_id, reference_id, instance_url, access_token, object_api_name, field_api_name, metadata, api_version):
+    if (field_exists (correlation_id, reference_id, instance_url, access_token, object_api_name, field_api_name, api_version)):
         lem.info (F'Field already exists: {object_api_name}.{field_api_name}')
         return FIELD_EXISTS
 
-    body = {
-        'FullName': F'{object_api_name}.{field_api_name}',
-        'Metadata': metadata
-    }
-
     try:
-        result = salesforce_execute_request (
-            'POST',
+        salesforce_client = create_simple_salesforce_client (
             instance_url,
             access_token,
-            F'/services/data/{api_version}/tooling/sobjects/CustomField',
-            body
+            api_version
         )
 
-    except Exception as e:
-        return FIELD_FAILED
+        sf_mdapi = salesforce_client.mdapi
+
+        custom_field = create_simple_salesforce_custom_field_metadata (
+            sf_mdapi,
+            object_api_name,
+            field_api_name,
+            metadata
+        )
+
+        # https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/customfield.htm
+        # https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_createMetadata.htm
+        sf_mdapi.CustomField.create (custom_field)
+
+    except Exception as error:
+        if ('DUPLICATE_DEVELOPER_NAME' not in str (error)):
+            lem.print (
+                correlationId  = correlation_id,
+                referenceId    = reference_id,
+                message        = F'Salesforce error.',
+                status         = 'FAILED',
+                tracepoint     = '',
+                source         = '',
+                target         = 'Salesforce',
+                action         = 'POST',
+                resource       = F'{object_api_name}.{field_api_name}',
+                elapsedTime    = lem.delta_time (),
+                meta           = {
+                    'api:': 'Metadata API',
+                    'what:': type (error).__name__,
+                    'body:': str (error)
+                }
+            )
+
+            return FIELD_FAILED
 
     lem.info (F'Created field: {object_api_name}.{field_api_name}')
     return FIELD_CREATED
@@ -576,13 +614,12 @@ def wait_for_object (instance_url, access_token, object_api_name, api_version, t
     raise TimeoutError (F'Object was created but did not become available within {timeout_seconds} seconds: {object_api_name}')
 
 SF_STANDARD_FIELDS = { 'Name' }
-def create_object_from_schema (instance_url, access_token, object_api_name, label, plural_label, sf_schema, api_version):
+def create_object_from_schema (correlation_id, reference_id, instance_url, access_token, object_api_name, label, plural_label, sf_schema, api_version):
     object_creation_exit_code = create_custom_object (instance_url, access_token, object_api_name, label, plural_label, api_version)
 
     wait_for_object (instance_url, access_token, object_api_name, api_version)
 
     faults = []
-    field_errors_exist = False
     for field_api_name, raw_spec in sf_schema.items ():
         spec = normalise_field_spec (field_api_name, raw_spec)
 
@@ -591,11 +628,11 @@ def create_object_from_schema (instance_url, access_token, object_api_name, labe
         # If, for some reason, a default field does not exist...
         if (field_api_name in SF_STANDARD_FIELDS or field_type == 'standard' or field_type == 'existing_only'):
             if (spec.get ('must_exist', False)):
-                if (not field_exists (instance_url, access_token, object_api_name, field_api_name, api_version)):
+                if (not field_exists (correlation_id, reference_id, instance_url, access_token, object_api_name, field_api_name, api_version)):
                     raise StandardFieldIsNonExistent (F'Expected field does not exist: {object_api_name}.{field_api_name}')
 
         metadata = field_metadata_from_spec (field_api_name, spec)
-        field_creation_exit_code = create_custom_field (instance_url, access_token, object_api_name, field_api_name, metadata, api_version)
+        field_creation_exit_code = create_custom_field (correlation_id, reference_id, instance_url, access_token, object_api_name, field_api_name, metadata, api_version)
 
         if (field_creation_exit_code == FIELD_FAILED):
             faults.append ({
@@ -607,29 +644,39 @@ def create_object_from_schema (instance_url, access_token, object_api_name, labe
 
     return object_creation_exit_code, faults
 
-def get_salesforce_id_by_external_id (object_api_name, external_id_field, external_id_value, salesforce_context_object):
+def get_salesforce_id_by_external_id (correlation_id, reference_id, object_api_name, external_id_field, external_id_value, salesforce_context_object):
     instance_url = salesforce_context_object['InstanceUrl']
     access_token = salesforce_context_object['AccessToken']
     api_version  = salesforce_context_object['ApiVersion']
 
-    encoded_external_id_value = urllib.parse.quote (str (external_id_value), safe = '')
-
-    response = requests.get (
-        F'{instance_url.rstrip ("/")}/services/data/{api_version}/sobjects/{object_api_name}/{external_id_field}/{encoded_external_id_value}',
-        headers = {
-            'Authorization': F'Bearer {access_token}',
-            'Accept': 'application/json'
-        },
-        timeout = 30
+    salesforce_client = create_simple_salesforce_client (
+        instance_url,
+        access_token,
+        api_version
     )
 
-    if (response.status_code == 404):
-        raise Exception (F'Salesforce parent record not found: {object_api_name}.{external_id_field}={external_id_value}')
+    salesforce_object = get_simple_salesforce_object (
+        salesforce_client,
+        object_api_name
+    )
 
-    if (response.status_code >= 400):
+    try:
+        # https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_sobject_upsert.htm
+        record = salesforce_object.get_by_custom_id (
+            external_id_field,
+            str (external_id_value),
+            timeout = SALESFORCE_REQUEST_TIMEOUT_SECONDS
+        )
+
+    except SalesforceResourceNotFound as error:
+        raise Exception (F'Salesforce parent record not found: {object_api_name}.{external_id_field}={external_id_value}') from error
+
+    except SalesforceError as error:
+        error_body = error.content.decode ('utf-8', errors = 'replace') if isinstance (error.content, bytes) else str (error.content)
+
         lem.print (
-            correlationId  = '',
-            referenceId    = '',
+            correlationId  = correlation_id,
+            referenceId    = reference_id,
             message        = F'Salesforce lookup failed!.',
             status         = 'FAILED',
             tracepoint     = 'END',
@@ -642,20 +689,21 @@ def get_salesforce_id_by_external_id (object_api_name, external_id_field, extern
                 'object:': object_api_name,
                 'external_id_field:': external_id_field,
                 'external_id_value:': external_id_value,
-                'status:': response.status_code,
-                'body:': response.text
+                'status:': error.status,
+                'body:': error_body
             }
         )
 
-        response.raise_for_status ()
+        raise
 
-    return response.json ()['Id']
+    return record['Id']
 
 def list_salesforce_api_versions (instance_url, access_token):
+    # https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_versions.htm
     response = requests.get (
         F'{instance_url.rstrip ("/")}/services/data/',
         headers = { 'Authorization': F'Bearer {access_token}', 'Accept': 'application/json' },
-        timeout = 30
+        timeout = SALESFORCE_REQUEST_TIMEOUT_SECONDS
     )
 
     response.raise_for_status ()
@@ -667,7 +715,7 @@ def get_latest_api_version (instance_url, access_token):
 
     latest = max (
         versions,
-        key=lambda version: float (version['version'])
+        key = lambda version: float (version['version'])
     )
 
     return F'v{latest["version"]}'
@@ -685,7 +733,7 @@ def sanitise_salesforce_payload (payload):
 
     return sanitised
 
-def dispatch_salesforce_record (correlation_id, object_api_name, external_id_field, payload, salesforce_context_object):
+def dispatch_salesforce_record (correlation_id, reference_id, object_api_name, external_id_field, payload, salesforce_context_object):
     if (external_id_field not in payload):
         raise Exception (F'Missing external ID field {external_id_field} in payload')
 
@@ -695,32 +743,44 @@ def dispatch_salesforce_record (correlation_id, object_api_name, external_id_fie
 
     external_id_value = payload[external_id_field]
 
-    encoded_external_id_value = urllib.parse.quote (str (external_id_value), safe = '')
-    salesforce_payload        = sanitise_salesforce_payload (payload)
+    salesforce_payload = sanitise_salesforce_payload (payload)
     del salesforce_payload[external_id_field]
 
-    response = requests.patch (
-        F'{instance_url.rstrip ("/")}/services/data/{api_version}/sobjects/{object_api_name}/{external_id_field}/{encoded_external_id_value}',
-
-        headers = {
-            'Authorization': F'Bearer {access_token}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-
-        json    = salesforce_payload,
-        timeout = 30
+    salesforce_client = create_simple_salesforce_client (
+        instance_url,
+        access_token,
+        api_version
     )
 
-    if (response.status_code >= 400):
+    salesforce_object = get_simple_salesforce_object (
+        salesforce_client,
+        object_api_name
+    )
+
+    external_id = format_external_id (
+        external_id_field,
+        str (external_id_value)
+    )
+
+    try:
+        # Salesforce external-ID upsert documentation:
+        # https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_sobject_upsert.htm
+        response = salesforce_object.upsert (
+            external_id,
+            salesforce_payload,
+            raw_response = True
+        )
+
+    except SalesforceError as error:
         try:
-            meta_body = response.json ()
-        except:
-            meta_body = response.text
+            meta_body = json.loads (error.content)
+
+        except (TypeError, UnicodeDecodeError, json.JSONDecodeError):
+            meta_body = error.content.decode ('utf-8', errors = 'replace') if isinstance (error.content, bytes) else str (error.content)
 
         lem.print (
             correlationId  = correlation_id,
-            referenceId    = correlation_id,
+            referenceId    = reference_id,
             message        = F'Failed to dispatch record to Salesforce!',
             status         = 'FAILED',
             tracepoint     = 'END',
@@ -730,7 +790,7 @@ def dispatch_salesforce_record (correlation_id, object_api_name, external_id_fie
             resource       = object_api_name,
             elapsedTime    = lem.delta_time (),
             meta           = {
-                'status:': response.status_code,
+                'status:': error.status,
                 'object:': object_api_name,
                 'external-id-field:': external_id_field,
                 'external-id-value:': external_id_value,
@@ -739,7 +799,7 @@ def dispatch_salesforce_record (correlation_id, object_api_name, external_id_fie
             verbosity      = 40
         )
 
-        response.raise_for_status ()
+        raise
 
     return {
         'success': True,
@@ -755,7 +815,6 @@ def assert_salesforce_name (name):
 
     if (re.fullmatch (R'[A-Za-z][A-Za-z0-9_]*(?:__[cr])?(?:\.[A-Za-z][A-Za-z0-9_]*(?:__[cr])?)*', name) is None):
         raise ValueError (F'Unsafe Salesforce name: {name}')
-
 
 def soql_value (value):
     if (value is None):
