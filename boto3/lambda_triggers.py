@@ -58,9 +58,10 @@ def list_lambda_function_versions (lambda_client, lambda_function_name):
 
     return []
 
-def filter_function_names (lambda_functions, prefix, suffix, contains):
+def filter_function_names (lambda_functions, prefix, suffix, contains, excludes):
     return pseq (lambda_functions) \
         .filter (lambda f: contains in f['FunctionName']) \
+        .filter (lambda f: excludes not in f['FunctionName']) \
         .filter (lambda f: f['FunctionName'].startswith (prefix)) \
         .filter (lambda f: f['FunctionName'].endswith (suffix)) \
         .to_list ()
@@ -175,7 +176,7 @@ def main (argv):
 
         for smd in source_mapping_details:
             function_arn = smd['FunctionArn']
-            function_envars = pseq (ingestor_functions) \
+            function_envars = seq (ingestor_functions) \
                 .filter (lambda f: function_name_from_arn (f['FunctionArn'], argv[KLAMBDA_VERSIONS_ONLY]) == function_name_from_arn (function_arn, argv[KLAMBDA_VERSIONS_ONLY])) \
                 .map (lambda f: f['Environment']['Variables']) \
                 .to_list ()[0]
@@ -194,7 +195,7 @@ def main (argv):
     else:
         updated_event_source_mappings = update_event_source_mappings (lambda_client, source_mapping_details, argv[KENABLE], argv[KLAMBDA_VERSIONS_ONLY])
 
-        print_result = pseq (updated_event_source_mappings) \
+        print_result = seq (updated_event_source_mappings) \
             .map (lambda x: function_name_from_arn (x, argv[KLAMBDA_VERSIONS_ONLY])) \
             .to_list ()
 

@@ -6,7 +6,7 @@ from aws_msk_iam_sasl_signer import MSKAuthTokenProvider
 from kafka import TopicPartition
 from kafka.structs import OffsetAndMetadata
 
-from kafka.sasl.oauth import AbstractTokenProvider
+from kafka.net.sasl.oauth import AbstractTokenProvider
 
 from functional import pseq, seq
 

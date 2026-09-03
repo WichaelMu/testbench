@@ -17,6 +17,9 @@ from kafka.sasl.oauth import AbstractTokenProvider
 
 import dscore as dsc
 
+import argv_parser as ap
+from argv_parser import KCONTAINS, KENABLE, KPREFIX, KREWIND_ONLY, KSUFFIX, KQUERY_ONLY, KEXCLUDES, KLAMBDA_VERSIONS_ONLY, KSTATUS_CHECK
+
 PROGRAM_NAME = 'lambda-esm-laziness'
 class MSKTokenProvider (AbstractTokenProvider):
     def __init__(self, region):
@@ -116,9 +119,10 @@ def list_functions (lambda_client):
 
     return lambda_functions
 
-def filter_function_names (lambda_functions, prefix, suffix, contains):
+def filter_function_names (lambda_functions, prefix, suffix, contains, excludes):
     return pseq (lambda_functions) \
         .filter (lambda f: contains in f['FunctionName']) \
+        .filter (lambda f: excludes not in f['FunctionName']) \
         .filter (lambda f: f['FunctionName'].startswith (prefix)) \
         .filter (lambda f: f['FunctionName'].endswith (suffix)) \
         .to_list ()
@@ -173,9 +177,9 @@ def update_event_source_mappings (lambda_client, event_source_mappings, desired_
             }
 
     valid_log_levels = {
-        "DEBUG",
-        "INFO",
-        "WARN"
+        'DEBUG',
+        'INFO',
+        'WARN'
     }
 
     desired_log_level = desired_log_level.upper ()
@@ -204,7 +208,7 @@ def main (argv):
     event_source_details_key_cache = F'event-source-details-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}'
 
     if (not dsc.has_generated (PROGRAM_NAME, request_key_cache)):
-        ingestor_functions = filter_function_names (lambda_functions, argv[KPREFIX], argv[KSUFFIX], argv[KCONTAINS])
+        ingestor_functions = filter_function_names (lambda_functions, argv[KPREFIX], argv[KSUFFIX], argv[KCONTAINS], argv[KEXCLUDES])
         dsc.save_generated (PROGRAM_NAME, request_key_cache, ingestor_functions)
 
     else:
@@ -224,104 +228,11 @@ def main (argv):
     else:
         source_mapping_details = dsc.load_generated (PROGRAM_NAME, event_source_details_key_cache)
 
-    result = update_event_source_mappings (lambda_client, source_mapping_details, argv[KLEVEL])
+    result = update_event_source_mappings (lambda_client, source_mapping_details, 'INFO')
 
     print (result)
 
-KLEVEL = 'level'
-KPREFIX = 'prefix'
-KSUFFIX = 'suffix'
-KCONTAINS = 'contains'
-KREWIND_ONLY = 'rewind-only'
-
-def parse_argv ():
-    argv = sys.argv[1:]
-    argc = len (argv)
-
-    # print (F'argc, argv: {argc}, {argv}')
-
-    def process_option (option, iterator):
-        match option:
-            case '--level':
-                iterator += 1
-
-                return { KLEVEL: argv[iterator] }, iterator
-
-            case '--prefix':
-                iterator += 1
-
-                return { KPREFIX: argv[iterator] }, iterator
-
-            case '--suffix':
-                iterator += 1
-
-                return { KSUFFIX: argv[iterator] }, iterator
-
-            case '--contains':
-                iterator += 1
-
-                return { KCONTAINS: argv[iterator] }, iterator
-
-            case '--rewind-only':
-                iterator += 1
-
-                if (argv[iterator].lower () == 'yes' or argv[iterator].lower () == 'true'):
-                    result = True
-                elif (argv[iterator].lower () == 'no' or argv[iterator].lower () == 'false'):
-                    result = False
-                else:
-                    print ('--rewind-only must be [ yes | no | true | false ]')
-                    sys.exit (1)
-
-                return { KREWIND_ONLY: argv[iterator] }, iterator
-
-            case '?' | '--help' | 'help' | '__HELP__':
-                print ('--enable true | false --prefix PREFIX --suffix SUFFIX')
-                sys.exit (0)
-                return {}, iterator
-
-            case _:
-                return {}, iterator
-
-    options = {
-        KLEVEL: 'DEBUG',
-        KPREFIX: '',
-        KSUFFIX: '',
-        KCONTAINS: ''
-    }
-
-    iterator = 0
-    while (iterator < argc):
-        try:
-
-            option, iterator = process_option (argv[iterator], iterator)
-            options = options | option
-
-            iterator += 1
-
-        except IndexError:
-
-            print (F'Option {iterator + 1} ({argv[iterator]}) requires a parameter.')
-            process_option ('?', 0)
-            sys.exit (1)
-
-    # print (options)
-
-    errors_exist = False
-    if (KLEVEL not in options and KREWIND_ONLY not in options):
-        print (F'One of --level or --rewind-only is required')
-        errors_exist = True
-
-    if (options[KPREFIX] == '' and options[KSUFFIX] == '' and options[KCONTAINS] == ''):
-        print (F'One of --prefix, --suffix, or --contains must be present')
-        errors_exist = True
-
-    if (errors_exist):
-        sys.exit (1)
-
-    return options
-
 if (__name__ == '__main__'):
-    argv = parse_argv ()
+    argv = ap.parse_argv ()
 
     main (argv)

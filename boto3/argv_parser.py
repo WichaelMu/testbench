@@ -5,6 +5,7 @@ KENABLE = 'enable'
 KPREFIX = 'prefix'
 KSUFFIX = 'suffix'
 KCONTAINS = 'contains'
+KEXCLUDES = 'excludes'
 KLAMBDA_VERSIONS_ONLY = 'lambda-versions'
 KREWIND_ONLY = 'rewind-only'
 KQUERY_ONLY = 'query'
@@ -54,6 +55,11 @@ def parse_argv ():
                 iterator += 1
 
                 return { KCONTAINS: argv[iterator] }, iterator
+
+            case '--excludes':
+                iterator += 1
+
+                return { KEXCLUDES: argv[iterator] }, iterator
 
             case '--rewind-only':
                 iterator += 1
