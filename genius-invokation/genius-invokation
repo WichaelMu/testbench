@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""Genius Invokation: send a carefully edited JSON card to an AWS Lambda."""
+from invokation.cli import main
+
+if (__name__ == "__main__"):
+    raise SystemExit (main ())
