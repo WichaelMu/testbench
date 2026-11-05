@@ -37,7 +37,7 @@ def get_object_fields (sf_context, object_api_name):
 def exec ():
     sf_context = salesforce_context ('')
 
-    qobject = 'Party__c'
+    qobject = 'Contact'
     fields = get_object_fields (sf_context, qobject)
 
     # fields_to_grab = [ 'Name', 'Email__c' ]
@@ -46,8 +46,9 @@ def exec ():
         object_api_name = qobject,
         fields = fields,
         where_equals = {
-            'StudentId__c': '28092020'
+            'UTSID__c': '26824021'
         },
+        limit = 10000
     )
 
 if (__name__ == '__main__'):
