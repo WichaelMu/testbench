@@ -111,7 +111,8 @@ def run (args):
         raise ValueError ('The editor needs an interactive terminal. Run it directly from zsh.')
 
     try:
-        from .ui import Editor, choose_function
+        from .ui import choose_function
+        from .vim_editor import Editor
 
     except ImportError as exc:
         raise ValueError ('Missing editor dependencies. Run: python3 -m pip install -r ' + str (Path (__file__).resolve ().parent.parent / 'requirements.txt')) from exc
