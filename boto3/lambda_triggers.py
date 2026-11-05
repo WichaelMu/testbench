@@ -3,14 +3,14 @@ import sys
 import boto3
 import socket
 
-from functional import pseq, seq
+from functional import seq
 
 from typing import Dict
 
 import dscore as dsc
 
 import argv_parser as ap
-from argv_parser import KCONTAINS, KENABLE, KPREFIX, KREWIND_ONLY, KSUFFIX, KQUERY_ONLY, KSTATUS_CHECK, KLAMBDA_VERSIONS_ONLY
+from argv_parser import KCONTAINS, KENABLE, KPREFIX, KREWIND_ONLY, KSUFFIX, KQUERY_ONLY, KSTATUS_CHECK, KLAMBDA_VERSIONS_ONLY, KEXCLUDES
 
 PROGRAM_NAME = 'lambda-trigger-laziness'
 
@@ -59,7 +59,7 @@ def list_lambda_function_versions (lambda_client, lambda_function_name):
     return []
 
 def filter_function_names (lambda_functions, prefix, suffix, contains, excludes):
-    return pseq (lambda_functions) \
+    return seq (lambda_functions) \
         .filter (lambda f: contains in f['FunctionName']) \
         .filter (lambda f: excludes not in f['FunctionName']) \
         .filter (lambda f: f['FunctionName'].startswith (prefix)) \
@@ -89,7 +89,7 @@ def list_event_source_mappings (lambda_client, lambda_functions):
     return event_sources
 
 def get_event_source_mappings (lambda_client, event_source_mappings):
-    uuids = pseq (event_source_mappings).map (lambda esm: esm['UUID']).to_list ()
+    uuids = seq (event_source_mappings).map (lambda esm: esm['UUID']).to_list ()
     event_source_mapping_responses = seq (uuids) \
         .map (lambda uuid: lambda_client.get_event_source_mapping (UUID = uuid)) \
         .to_list ()
@@ -137,7 +137,7 @@ def main (argv):
     event_source_details_key_cache = F'event-source-details-{argv[KPREFIX]}-{argv[KSUFFIX]}-{argv[KCONTAINS]}-{argv[KLAMBDA_VERSIONS_ONLY]}'
 
     if (not dsc.has_generated (PROGRAM_NAME, request_key_cache)):
-        ingestor_functions = filter_function_names (lambda_functions, argv[KPREFIX], argv[KSUFFIX], argv[KCONTAINS])
+        ingestor_functions = filter_function_names (lambda_functions, argv[KPREFIX], argv[KSUFFIX], argv[KCONTAINS], argv[KEXCLUDES])
         dsc.save_generated (PROGRAM_NAME, request_key_cache, ingestor_functions)
 
     else:
@@ -157,11 +157,11 @@ def main (argv):
         event_source_mappings = dsc.load_generated (PROGRAM_NAME, event_source_map_key_cache)
 
     if (argv[KQUERY_ONLY]):
-        print (pseq (ingestor_functions).map (lambda x: x['FunctionName']).to_list ())
+        print (seq (ingestor_functions).map (lambda x: x['FunctionName']).to_list ())
         return
 
     if (argv[KSTATUS_CHECK]):
-        print (pseq (event_source_mappings).map (lambda e: { function_name_from_arn (e['FunctionArn'], argv[KLAMBDA_VERSIONS_ONLY]): e['State'] }).to_list ())
+        print (seq (event_source_mappings).map (lambda e: { function_name_from_arn (e['FunctionArn'], argv[KLAMBDA_VERSIONS_ONLY]): e['State'] }).to_list ())
         return
 
     if (not dsc.has_generated (PROGRAM_NAME, event_source_details_key_cache)):

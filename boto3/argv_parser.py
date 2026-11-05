@@ -86,6 +86,7 @@ def parse_argv ():
         KPREFIX: '',
         KSUFFIX: '',
         KCONTAINS: '',
+        KEXCLUDES: '1234567890-=qweasdzxcrtyfghvbnuiojklm,.op[l;,./',
         KQUERY_ONLY: False,
         KSTATUS_CHECK: False,
         KLAMBDA_VERSIONS_ONLY: False

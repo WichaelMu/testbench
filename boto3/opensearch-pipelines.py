@@ -118,11 +118,11 @@ def exec (event, context):
                 .to_dict ()
             ) \
             .to_list ()
-        print (print_pipelines)
-        return
+        return print_pipelines
 
     if (KREWIND_ONLY in argv and argv[KREWIND_ONLY]):
         topics = load_yaml (filtered_pipelines)
+        result = []
         for pd in topics:
             streaming_cluster_endpoint = 'boot-gkbcfaxp.c1.kafka-serverless.ap-southeast-2.amazonaws.com:9098'
             streaming_cluster_region   = 'ap-southeast-2'
@@ -131,7 +131,8 @@ def exec (event, context):
             pipeline_name              = pd['PipelineName']
 
             import kafka_rewinder as kr
-            result = kr.reset_consumer_group_offsets (pipeline_name, topic, consumer_group, streaming_cluster_endpoint, streaming_cluster_region)
+            result.append (kr.reset_consumer_group_offsets (pipeline_name, topic, consumer_group, streaming_cluster_endpoint, streaming_cluster_region))
+        return result
 
     elif (KENABLE in argv and argv[KENABLE]):
         start_pipelines = seq (filtered_pipelines) \
@@ -144,7 +145,7 @@ def exec (event, context):
             }) \
             .to_list ()
 
-        print (start_pipelines)
+        return start_pipelines
 
     elif (KENABLE in argv and not argv[KENABLE]):
         stop_pipelines = seq (filtered_pipelines) \
@@ -157,7 +158,7 @@ def exec (event, context):
             }) \
             .to_list ()
 
-        print (stop_pipelines)
+        return stop_pipelines
 
 if (__name__ == "__main__"):
-    exec (None, None)
+    print (exec (None, None))
