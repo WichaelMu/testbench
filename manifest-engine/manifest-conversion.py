@@ -24,11 +24,11 @@ def main ():
         'correlation_id': correlation_id
     }
 
-    manifest = open_yaml ('student.stu.ssp.compntssp.update.yaml')
+    manifest = open_yaml ('events/student.stu.details.yaml')
 
     source = {
         'source': {
-            'input': load_event (),
+            'input': dsc.load_json ('events/inputs/meng-input.json'),
             'meta': {
                 'kafka_key': lem.generate_ulid_now (),
                 'kafka_topic': 'the-kafka-topic',
