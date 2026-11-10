@@ -3,9 +3,11 @@ import re
 import time
 import requests
 import json
-import boto3
+import random
 import jwt
 import urllib.parse
+
+import boto3
 
 import py_log_event_module as lem
 
@@ -20,6 +22,9 @@ OBJECT_CREATED = 'OBJECT_CREATED'
 FIELD_EXISTS   = 'FIELD_EXISTS'
 FIELD_CREATED  = 'FIELD_CREATED'
 FIELD_FAILED   = 'FIELD_FAILED'
+
+LOOKUP_NOT_FOUND = 'LOOKUP_NOT_FOUND'
+LOOKUP_EXCEPTION = 'LOOKUP_EXCEPTION'
 SALESFORCE_REQUEST_TIMEOUT_SECONDS = 30
 
 
@@ -668,16 +673,11 @@ def get_salesforce_id_by_external_id (correlation_id, reference_id, object_api_n
             timeout = SALESFORCE_REQUEST_TIMEOUT_SECONDS
         )
 
-    except SalesforceResourceNotFound as error:
-        raise Exception (F'Salesforce parent record not found: {object_api_name}.{external_id_field}={external_id_value}') from error
-
-    except SalesforceError as error:
-        error_body = error.content.decode ('utf-8', errors = 'replace') if isinstance (error.content, bytes) else str (error.content)
-
+    except SalesforceResourceNotFound as sfrnf:
         lem.print (
             correlationId  = correlation_id,
             referenceId    = reference_id,
-            message        = F'Salesforce lookup failed!.',
+            message        = F'Salesforce lookup failed!',
             status         = 'FAILED',
             tracepoint     = 'END',
             source         = 'MSK',
@@ -688,13 +688,56 @@ def get_salesforce_id_by_external_id (correlation_id, reference_id, object_api_n
             meta           = {
                 'object:': object_api_name,
                 'external_id_field:': external_id_field,
-                'external_id_value:': external_id_value,
-                'status:': error.status,
-                'body:': error_body
+                'external_id_value:': external_id_value
+            },
+            raised_exception = sfrnf,
+            verbosity      = lem.WARNING
+        )
+
+        return (
+            LOOKUP_NOT_FOUND,
+            {
+                'success': False,
+                'message': 'Lookup found no results.',
+                'object:': object_api_name,
+                'external_id_field:': external_id_field,
+                'external_id_value:': external_id_value
             }
         )
 
-        raise
+    except SalesforceError as sfe:
+        lem.print (
+            correlationId  = correlation_id,
+            referenceId    = reference_id,
+            message        = F'Salesforce lookup raised a genuine exception!',
+            status         = 'FAILED',
+            tracepoint     = 'END',
+            source         = 'MSK',
+            target         = 'Salesforce',
+            action         = 'GET',
+            resource       = '{external_id_field}.{external_id_value}',
+            elapsedTime    = lem.delta_time (),
+            meta           = {
+                'object:': object_api_name,
+                'external_id_field:': external_id_field,
+                'external_id_value:': external_id_value
+            },
+            raised_exception = sfe,
+            verbosity      = lem.ERROR
+        )
+
+        return (
+            LOOKUP_EXCEPTION,
+            {
+                'success': False,
+                'type': type (sfe).__name__,
+                'message': str (sfe),
+
+                'object:': object_api_name,
+                'external_id_field:': external_id_field,
+                'external_id_value:': external_id_value
+            }
+        )
 
     return record['Id']
 
@@ -772,12 +815,6 @@ def dispatch_salesforce_record (correlation_id, reference_id, object_api_name, e
         )
 
     except SalesforceError as error:
-        try:
-            meta_body = json.loads (error.content)
-
-        except (TypeError, UnicodeDecodeError, json.JSONDecodeError):
-            meta_body = error.content.decode ('utf-8', errors = 'replace') if isinstance (error.content, bytes) else str (error.content)
-
         lem.print (
             correlationId  = correlation_id,
             referenceId    = reference_id,
@@ -790,24 +827,114 @@ def dispatch_salesforce_record (correlation_id, reference_id, object_api_name, e
             resource       = object_api_name,
             elapsedTime    = lem.delta_time (),
             meta           = {
-                'status:': error.status,
                 'object:': object_api_name,
                 'external-id-field:': external_id_field,
                 'external-id-value:': external_id_value,
-                'body:': meta_body
             },
-            verbosity      = 40
+            raised_exception = error,
+            verbosity      = lem.ERROR
         )
 
-        raise
+        return {
+            'success': False,
+
+            'type': type (error).__name__,
+            'message': str (error),
+
+            'object': object_api_name,
+            'external-id-field': external_id_field,
+            'external-id-value': external_id_value
+        }
 
     return {
         'success': True,
         'object': object_api_name,
-        'externalIdField': external_id_field,
-        'externalIdValue': external_id_value,
+        'external-id-field': external_id_field,
+        'external-id-value': external_id_value,
         'response': response.json () if response.text.strip () != '' else 'NO_RESPONSE'
     }
+
+def is_salesforce_row_lock_failure (result):
+    if (not isinstance (result, dict) or result.get ('success') is not False):
+        return False
+
+    return 'UNABLE_TO_LOCK_ROW' in result.get ('message', '')
+
+SALESFORCE_LOCK_RETRY_ATTEMPTS     = 3
+SALESFORCE_LOCK_RETRY_BASE_SECONDS = .5
+def safe_dispatch_salesforce_record (correlation_id, reference_id, object_api_name, external_id_field, payload, partition, offset, salesforce_context_object):
+    result = {}
+
+    for attempt in range (1, SALESFORCE_LOCK_RETRY_ATTEMPTS + 1):
+        result = dispatch_salesforce_record (
+            correlation_id,
+            reference_id,
+            object_api_name,
+            external_id_field,
+            payload,
+            salesforce_context_object
+        )
+
+        is_row_locked = is_salesforce_row_lock_failure (result)
+        if (not is_row_locked or attempt == SALESFORCE_LOCK_RETRY_ATTEMPTS):
+            lem.print (
+                correlationId = correlation_id,
+                referenceId   = reference_id,
+                message       = F'Row on {object_api_name} is locked.' if is_row_locked else 'Maximum attempts reached!',
+                status        = 'FAILED',
+                tracepoint    = 'RETRIED',
+                source        = 'MSK',
+                target        = 'Salesforce',
+                action        = 'PATCH',
+                resource      = object_api_name,
+                elapsedTime   = lem.delta_time (),
+                meta          = {
+                    'attempt': attempt,
+                    'maximum-attempts': SALESFORCE_LOCK_RETRY_ATTEMPTS,
+                    'is-row-locked': is_row_locked,
+                    'object-api-name': object_api_name,
+                    'external-id-field': external_id_field,
+                    'external-id-value': payload.get (external_id_field)
+                },
+                verbosity     = lem.ERROR
+            )
+
+            return result, {
+                'itemIdentifier': {
+                    'partition': partition,
+                    'offset':    offset
+                }
+            }
+
+        maximum_delay = SALESFORCE_LOCK_RETRY_BASE_SECONDS * (2 ** attempt)
+        retry_delay = random.uniform (SALESFORCE_LOCK_RETRY_BASE_SECONDS, maximum_delay)
+
+        lem.print (
+            correlationId = correlation_id,
+            referenceId   = reference_id,
+            message       = 'Salesforce Contact is locked; retrying with jitter.',
+            status        = 'RETRYING',
+            tracepoint    = 'RETRY',
+            source        = 'MSK',
+            target        = 'Salesforce',
+            action        = 'PATCH',
+            resource      = object_api_name,
+            elapsedTime   = lem.delta_time (),
+            meta          = {
+                'attempt': attempt,
+                'maximum-attempts': SALESFORCE_LOCK_RETRY_ATTEMPTS,
+                'retry-delay-seconds': retry_delay,
+                'is-row-locked': is_row_locked,
+                'object-api-name': object_api_name,
+                'external-id-field': external_id_field,
+                'external-id-value': payload.get (external_id_field)
+            },
+            verbosity     = lem.WARNING
+        )
+
+        time.sleep (retry_delay)
+
+    return result, {}
 
 def assert_salesforce_name (name):
     if (not isinstance (name, str)):
@@ -958,6 +1085,77 @@ def get_salesforce_records (salesforce_context_object, object_api_name, fields =
         'query': query,
         'count': len (records),
         'records': records
+    }
+
+def delete_all_salesforce_records (salesforce_context_object, object_api_name):
+    sf_result = get_salesforce_records (
+        salesforce_context_object,
+        object_api_name,
+        fields = [ 'Id' ],
+        fetch_all = True
+    )
+
+    records = sf_result['records']
+    record_count = sf_result['count']
+    results = []
+
+    if (record_count > 0):
+        confirmation = input (
+            F'{object_api_name} has {record_count} records. '
+            F'Type {record_count} to delete all of them: '
+        )
+
+        if (confirmation != str (record_count)):
+            raise ValueError ('Record count did not match; no records were deleted.')
+
+        salesforce_client = create_simple_salesforce_client (
+            salesforce_context_object['InstanceUrl'],
+            salesforce_context_object['AccessToken'],
+            salesforce_context_object['ApiVersion']
+        )
+
+        salesforce_object = get_simple_salesforce_object (
+            salesforce_client.bulk,
+            object_api_name
+        )
+
+        try:
+            results = list (salesforce_object.delete (
+                records,
+                batch_size = 10000,
+                use_serial = True
+            ))
+
+        except SalesforceError as error:
+            lem.print (
+                correlationId  = '',
+                referenceId    = '',
+                message        = 'Salesforce bulk delete failed',
+                status         = 'FAILED',
+                tracepoint     = 'END',
+                source         = 'KALI',
+                target         = 'Salesforce',
+                action         = 'DELETE',
+                resource       = object_api_name,
+                elapsedTime    = lem.delta_time (),
+                meta           = {
+                    'object:': object_api_name,
+                    'count:': record_count
+                },
+                raised_exception = error,
+                verbosity      = lem.ERROR
+            )
+
+            raise
+
+    deleted_count = sum (1 for result in results if result.get ('success') is True)
+
+    return {
+        'object': object_api_name,
+        'count': record_count,
+        'deleted_count': deleted_count,
+        'success': deleted_count == record_count,
+        'results': results
     }
 
 def get_salesforce_object_fields (salesforce_context_object, object_api_name, custom_only = False, include_deprecated = False, include_metadata = False, include_reference_fields = False):

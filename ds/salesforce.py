@@ -37,7 +37,12 @@ def get_object_fields (sf_context, object_api_name):
 def exec ():
     sf_context = salesforce_context ('')
 
+    r = sf.delete_all_salesforce_records (sf_context, 'Account')
+    print (r)
+    return
+
     qobject = 'Contact'
+    # sf.delete_all_salesforce_records (sf_context, qobject)
     fields = get_object_fields (sf_context, qobject)
 
     # fields_to_grab = [ 'Name', 'Email__c' ]
