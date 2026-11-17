@@ -5,14 +5,13 @@ import requests
 import json
 import random
 import jwt
-import urllib.parse
 
 import boto3
 
 import py_log_event_module as lem
 
 from simple_salesforce.api import Salesforce
-from simple_salesforce.exceptions import SalesforceError, SalesforceResourceNotFound
+from simple_salesforce.exceptions import SalesforceError, SalesforceResourceNotFound, SalesforceMalformedRequest
 from simple_salesforce.format import format_external_id
 import email_validator as ev
 
@@ -814,6 +813,39 @@ def dispatch_salesforce_record (correlation_id, reference_id, object_api_name, e
             raw_response = True
         )
 
+    except SalesforceMalformedRequest as sfmr:
+        lem.print (
+            correlationId  = correlation_id,
+            referenceId    = reference_id,
+            message        = F'Failed to dispatch! The event *likely* has fields that do not conform to the schema.',
+            status         = 'FAILED',
+            tracepoint     = 'END',
+            source         = 'MSK',
+            target         = instance_url,
+            action         = 'PATCH',
+            resource       = object_api_name,
+            elapsedTime    = lem.delta_time (),
+            meta           = {
+                'object:': object_api_name,
+                'external-id-field:': external_id_field,
+                'external-id-value:': external_id_value,
+            },
+            raised_exception = error,
+            verbosity      = lem.ERROR
+        )
+
+        return {
+            'success': False,
+            'should-retry': False,
+
+            'type': type (sfmr).__name__,
+            'message': str (sfmr),
+
+            'object': object_api_name,
+            'external-id-field': external_id_field,
+            'external-id-value': external_id_value
+        }
+
     except SalesforceError as error:
         lem.print (
             correlationId  = correlation_id,
@@ -837,6 +869,7 @@ def dispatch_salesforce_record (correlation_id, reference_id, object_api_name, e
 
         return {
             'success': False,
+            'should-retry': True,
 
             'type': type (error).__name__,
             'message': str (error),
@@ -848,6 +881,7 @@ def dispatch_salesforce_record (correlation_id, reference_id, object_api_name, e
 
     return {
         'success': True,
+        'should-retry': None,
         'object': object_api_name,
         'external-id-field': external_id_field,
         'external-id-value': external_id_value,
@@ -875,12 +909,54 @@ def safe_dispatch_salesforce_record (correlation_id, reference_id, object_api_na
             salesforce_context_object
         )
 
+        lem.print (
+            correlationId = correlation_id,
+            referenceId   = reference_id,
+            message       = F'Dispatch Salesforce record returned a result.',
+            status        = 'SUCCESS',
+            tracepoint    = 'CONTINUE',
+            source        = 'MSK',
+            target        = 'Salesforce',
+            action        = 'PATCH',
+            resource      = object_api_name,
+            elapsedTime   = lem.delta_time (),
+            meta          = {
+                'result': result,
+
+                'attempt': attempt,
+                'maximum-attempts': SALESFORCE_LOCK_RETRY_ATTEMPTS,
+
+                'object-api-name': object_api_name,
+                'external-id-field': external_id_field,
+                'external-id-value': payload.get (external_id_field)
+            },
+            verbosity     = lem.INFO
+        )
+
+        # https://www.youtube.com/watch?v=bQchpOrl-PM
+        was_dispatch_successful = result.get ('success', None)
+        if (was_dispatch_successful is not None and isinstance (was_dispatch_successful, bool) and was_dispatch_successful):
+            return result, {}
+
+        if (not was_dispatch_successful):
+            if (result.get ('should-retry', None)):
+                return result, {
+                    'itemIdentifier': {
+                        'partition': partition,
+                        'offset':    offset
+                    }
+                }
+
+            else:
+                return result, {}
+
+
         is_row_locked = is_salesforce_row_lock_failure (result)
         if (not is_row_locked or attempt == SALESFORCE_LOCK_RETRY_ATTEMPTS):
             lem.print (
                 correlationId = correlation_id,
                 referenceId   = reference_id,
-                message       = F'Row on {object_api_name} is locked.' if is_row_locked else 'Maximum attempts reached!',
+                message       = F'Row on {object_api_name} is locked.' if is_row_locked else 'Malsndlajsndkjasndkjanskjdanskjndajskndaximum attempts reached!',
                 status        = 'FAILED',
                 tracepoint    = 'RETRIED',
                 source        = 'MSK',
@@ -898,6 +974,9 @@ def safe_dispatch_salesforce_record (correlation_id, reference_id, object_api_na
                 },
                 verbosity     = lem.ERROR
             )
+
+            st = lem.bob.build_stacktrace_here ()
+            lem.jdump (st)
 
             return result, {
                 'itemIdentifier': {
