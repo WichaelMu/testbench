@@ -5,6 +5,9 @@ import base64
 
 import dscore as dsc
 
+import tbench_salesforce_module as smod
+
+sys.path.append (F'{os.environ['DITLOC']}/tf-data-plane-copt/contrib/src/lambda/student_cohort_salesforce_module/')
 sys.path.append (F'{os.environ['DITLOC']}/tf-data-plane-copt/contrib/src/lambda/student_cohort_salesforce_contactdetails_connector/')
 import student_cohorts_salesforce_contactdetails_connector as sconn
 

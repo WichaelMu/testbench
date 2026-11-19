@@ -6,13 +6,13 @@ import log_event_module as lem
 
 import dscore as dsc
 
-import salesforce_module as sf
+import tbench_salesforce_module as tsf
 
 def salesforce_context (correlation_id):
-    salesforce_connection = sf.setup_salesforce_connection (correlation_id)
+    salesforce_connection = tsf.sf.setup_salesforce_connection (correlation_id)
     instance_url = salesforce_connection['instance_url']
     access_token = salesforce_connection['access_token']
-    api_version = sf.get_latest_api_version (instance_url, access_token)
+    api_version = tsf.sf.get_latest_api_version (instance_url, access_token)
 
     return {
         'InstanceUrl': instance_url,
@@ -21,14 +21,14 @@ def salesforce_context (correlation_id):
     }
 
 def get_object_rows (sf_context, **kwargs):
-    sf_result = sf.get_salesforce_records (sf_context, **kwargs)
+    sf_result = tsf.get_salesforce_records (sf_context, **kwargs)
     sf_records = sf_result['records']
 
     print (sf_records)
     return sf_records
 
 def get_object_fields (sf_context, object_api_name):
-    sf_result = sf.get_salesforce_object_fields (sf_context, object_api_name)
+    sf_result = tsf.get_salesforce_object_fields (sf_context, object_api_name)
     sf_fields = sf_result['fields']
 
     # print (sf_fields)
@@ -37,13 +37,13 @@ def get_object_fields (sf_context, object_api_name):
 def exec ():
     sf_context = salesforce_context ('')
 
-    r = sf.delete_all_salesforce_records (sf_context, 'Account')
-    print (r)
-    return
+    # r = sf.delete_all_salesforce_records (sf_context, 'Account')
+    # return
 
-    qobject = 'Contact'
-    # sf.delete_all_salesforce_records (sf_context, qobject)
+    qobject = 'Account'
     fields = get_object_fields (sf_context, qobject)
+    print (fields)
+    return
 
     # fields_to_grab = [ 'Name', 'Email__c' ]
     get_object_rows (

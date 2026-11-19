@@ -17,7 +17,7 @@ import evaluation_and_persistence as eap
 PROGRAM_NAME = 'rule-engine'
 
 def main ():
-    event = dsc.load_json ('rules/atsi.json')
+    event = dsc.load_json ('inputs/rule-engine/atsi.json')
     result = eap.run_rules ('', event, should_persist = True)
 
     tags = result['tags']
