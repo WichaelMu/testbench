@@ -6,6 +6,7 @@ import requests
 import json
 import random
 import jwt
+import urllib.parse
 
 import boto3
 

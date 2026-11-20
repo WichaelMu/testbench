@@ -42,16 +42,14 @@ def exec ():
 
     qobject = 'Account'
     fields = get_object_fields (sf_context, qobject)
-    print (fields)
-    return
 
-    # fields_to_grab = [ 'Name', 'Email__c' ]
+    fields_to_grab = [ 'UTS_Identifier__c', 'PreferredName__pc' ]
     get_object_rows (
         sf_context,
         object_api_name = qobject,
         fields = fields,
         where_equals = {
-            'UTSID__c': '26824021'
+            'UTS_Identifier__c': '30000000'
         },
         limit = 10000
     )
