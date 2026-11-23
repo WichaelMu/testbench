@@ -262,38 +262,16 @@ def get_salesforce_object_fields (salesforce_context_object, object_api_name, cu
     access_token = salesforce_context_object['AccessToken']
     api_version  = salesforce_context_object['ApiVersion']
 
-    response = requests.get (
-        F'{instance_url.rstrip ("/")}/services/data/{api_version}/sobjects/{object_api_name}/describe',
-        headers = {
-            'Authorization': F'Bearer {access_token}',
-            'Accept': 'application/json'
-        },
-        timeout = 30
+    sf_client = sf.create_simple_salesforce_client (
+        instance_url,
+        access_token,
+        api_version
     )
 
-    if (response.status_code >= 400):
-        lem.print (
-            correlationId  = '',
-            referenceId    = '',
-            message        = F'Salesforce object describe failed',
-            status         = 'FAILED',
-            tracepoint     = 'END',
-            source         = 'KALI',
-            target         = 'Salesforce',
-            action         = 'GET',
-            resource       = object_api_name,
-            elapsedTime    = lem.delta_time (),
-            meta           = {
-                'object:': object_api_name,
-                'status:': response.status_code,
-                'body:': response.text,
-            },
-            verbosity      = lem.ERROR
-        )
+    sf_object = sf.get_simple_salesforce_object (sf_client, object_api_name)
+    response = sf_object.describe ()
 
-        response.raise_for_status ()
-
-    describe = response.json ()
+    describe = json.loads (json.dumps (response))
 
     field_results = []
 
