@@ -39,8 +39,25 @@ def mimic_kafka_event (data):
                     'topic': 'nonprod.domain.v1.student.contact_details',
                     'offset': 0,
                     'value': base64.b64encode (json.dumps (data).encode ('utf-8'))
+                },
+                {
+                    'topic': 'nonprod.domain.v1.student.contact_details',
+                    'offset': 1,
+                    'value': base64.b64encode (json.dumps (dsc.load_json ('inputs/salesforce/null2.json')).encode ('utf-8'))
                 }
-            ]
+            ],
+            # 'nonprod.domain.v1.student.contact_details-1': [
+            #     {
+            #         'topic': 'nonprod.domain.v1.student.contact_details',
+            #         'offset': 0,
+            #         'value': base64.b64encode (json.dumps (data).encode ('utf-8'))
+            #     },
+            #     {
+            #         'topic': 'nonprod.domain.v1.student.contact_details',
+            #         'offset': 1,
+            #         'value': base64.b64encode (json.dumps (dsc.load_json ('inputs/salesforce/null2.json')).encode ('utf-8'))
+            #     }
+            # ]
         }
     }
 
