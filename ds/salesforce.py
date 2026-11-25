@@ -28,14 +28,21 @@ def get_object_rows (sf_context, **kwargs):
     return sf_records
 
 def get_object_fields (sf_context, object_api_name):
-    sf_result = tsf.get_salesforce_object_fields (sf_context, object_api_name)
+    sf_result = tsf.sf.get_salesforce_object_fields (sf_context, object_api_name)
     sf_fields = sf_result['fields']
 
     # print (sf_fields)
     return sf_fields
 
+def get_limits (sf_context_object):
+    limits = tsf.get_sf_limits (sf_context_object)
+    print (limits)
+
 def exec ():
     sf_context = salesforce_context ('')
+
+    get_limits (sf_context)
+    return
 
     # r = sf.delete_all_salesforce_records (sf_context, 'Account')
     # return

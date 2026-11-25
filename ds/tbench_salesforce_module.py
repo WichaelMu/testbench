@@ -255,12 +255,25 @@ def delete_all_salesforce_records (salesforce_context_object, object_api_name):
         'results': results
     }
 
-def get_salesforce_object_fields (salesforce_context_object, object_api_name, custom_only = False, include_deprecated = False, include_metadata = False, include_reference_fields = False):
-    assert_salesforce_name (object_api_name)
+def normalise_ordered_dict (obj):
+    if (isinstance (obj, dict)):
+        return {
+            key: normalise_ordered_dict (value)
+            for key, value in obj.items ()
+        }
 
-    instance_url = salesforce_context_object['InstanceUrl']
-    access_token = salesforce_context_object['AccessToken']
-    api_version  = salesforce_context_object['ApiVersion']
+    if (isinstance (obj, list)):
+        return list (map (normalise_ordered_dict, obj))
+
+    if (isinstance (obj, tuple)):
+        return tuple (map (normalise_ordered_dict, obj))
+
+    return obj
+
+def get_sf_limits (sf_context_object):
+    instance_url = sf_context_object['InstanceUrl']
+    access_token = sf_context_object['AccessToken']
+    api_version  = sf_context_object['ApiVersion']
 
     sf_client = sf.create_simple_salesforce_client (
         instance_url,
@@ -268,50 +281,12 @@ def get_salesforce_object_fields (salesforce_context_object, object_api_name, cu
         api_version
     )
 
-    sf_object = sf.get_simple_salesforce_object (sf_client, object_api_name)
-    response = sf_object.describe ()
+    limits = sf_client.limits ()
 
-    describe = json.loads (json.dumps (response))
-
-    field_results = []
-
-    for field in describe.get ('fields', []):
-        if (include_deprecated is False and field.get ('deprecatedAndHidden') is True):
-            continue
-
-        if (custom_only is True and field.get ('custom') is not True):
-            continue
-
-        field_name = field['name']
-
-        if (include_metadata is True):
-            field_results.append ({
-                'name': field_name,
-                'label': field.get ('label'),
-                'type': field.get ('type'),
-                'length': field.get ('length'),
-                'custom': field.get ('custom'),
-                'createable': field.get ('createable'),
-                'updateable': field.get ('updateable'),
-                'nillable': field.get ('nillable'),
-                'externalId': field.get ('externalId'),
-                'unique': field.get ('unique'),
-                'referenceTo': field.get ('referenceTo'),
-                'relationshipName': field.get ('relationshipName')
-            })
-
-            continue
-
-        field_results.append (field_name)
-
-        if (include_reference_fields is True):
-            relationship_name = field.get ('relationshipName')
-
-            if (relationship_name is not None):
-                field_results.append (F'{relationship_name}.Name')
+    bulk = limits['DailyBulkApiBatches']
 
     return {
-        'object': object_api_name,
-        'count': len (field_results),
-        'fields': field_results
+        'Maximum': bulk['Max'],
+        'Remaining': bulk['Remaining'],
+        'Consumed': bulk['Max'] - bulk['Remaining']
     }
