@@ -100,7 +100,7 @@ class Target:
     @property
     def label (self):
         name = self.name + (F':{self.qualifier}' if self.qualifier else '')
-        return F'{name} (…{self.account[-4:]}, {self.region})'
+        return F'{name} (...{self.account[-4:]}, {self.region})'
 
 def split_function (value):
     if (':function:' in value):

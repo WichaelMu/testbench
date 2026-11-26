@@ -41,7 +41,7 @@ def parser ():
     return result
 
 def diagnose_login (aws: AWS, failure):
-    print ('AWS request failed; checking login…', file=sys.stderr, flush = True)
+    print ('AWS request failed; checking login...', file=sys.stderr, flush = True)
 
     try:
         identity = aws.identity ()
@@ -50,14 +50,14 @@ def diagnose_login (aws: AWS, failure):
         return AwsError (F'{failure}\n{diagnostic}')
 
     account = identity['Account']
-    return AwsError (F'{failure}\nAWS credentials are valid for account …{account[-4:]}.')
+    return AwsError (F'{failure}\nAWS credentials are valid for account ...{account[-4:]}.')
 
 def load_functions (aws, cache, force = False):
     snapshot = cache.load ()
 
     print ('Lambda cache last refresh: ' + describe_refresh (snapshot.refreshed_at if snapshot else None), flush = True)
     if (force or snapshot is None or not snapshot.fresh ()):
-        print ('Refreshing Lambda list…', flush = True)
+        print ('Refreshing Lambda list...', flush = True)
         try:
             functions = aws.functions ()
 
@@ -98,12 +98,12 @@ def run (args):
     aws     = AWS (args.profile, context.region)
 
     if (args.check_login):
-        print ('Checking AWS login…', flush = True)
+        print ('Checking AWS login...', flush = True)
 
         identity = aws.identity ()
         alias    = aws.account_alias ()
 
-        print (F'AWS credentials valid · account …{identity['Account'][-4:]}' + (F' · account alias {alias}' if alias else '') + F' · profile {context.profile}')
+        print (F'AWS credentials valid · account ...{identity['Account'][-4:]}' + (F' · account alias {alias}' if alias else '') + F' · profile {context.profile}')
 
         return 0
 
@@ -158,7 +158,7 @@ def run (args):
 
         payload_bytes (text)
         invocation = history.begin (target, text)
-        print (F'Invoking {target.label}…', flush = True)
+        print (F'Invoking {target.label}...', flush = True)
 
         try:
             metadata, response = aws.invoke (target, text)
