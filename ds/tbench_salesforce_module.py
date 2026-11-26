@@ -288,5 +288,6 @@ def get_sf_limits (sf_context_object):
     return {
         'Maximum': bulk['Max'],
         'Remaining': bulk['Remaining'],
-        'Consumed': bulk['Max'] - bulk['Remaining']
+        'Consumed': bulk['Max'] - bulk['Remaining'],
+        'DailyApiRequests': normalise_ordered_dict (limits['DailyApiRequests'])
     }

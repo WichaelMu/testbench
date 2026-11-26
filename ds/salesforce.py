@@ -38,25 +38,33 @@ def get_limits (sf_context_object):
     limits = tsf.get_sf_limits (sf_context_object)
     print (limits)
 
+def get_sf_object_count (sf_qobject, sf_context_object):
+    sf_result = tsf.get_salesforce_records (
+        sf_context_object,
+        sf_qobject,
+        fields = [ 'Id' ],
+        fetch_all = True
+    )
+
+    record_count = sf_result['count']
+    print (record_count)
+    return record_count
+
 def exec ():
     sf_context = salesforce_context ('')
+    qobject = 'GroupMembership__c'
 
-    get_limits (sf_context)
-    return
+    # get_sf_object_count (qobject, sf_context)
+    # get_limits (sf_context)
 
-    # r = sf.delete_all_salesforce_records (sf_context, 'Account')
-    # return
-
-    qobject = 'Account'
     fields = get_object_fields (sf_context, qobject)
 
-    fields_to_grab = [ 'UTS_Identifier__c', 'PreferredName__pc' ]
+    # fields_to_grab = [ 'UTS_Identifier__c', 'PreferredName__pc' ]
     get_object_rows (
         sf_context,
         object_api_name = qobject,
         fields = fields,
         where_equals = {
-            'UTS_Identifier__c': '30000000'
         },
         limit = 10000
     )
