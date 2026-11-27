@@ -282,6 +282,7 @@ def get_sf_limits (sf_context_object):
     )
 
     limits = sf_client.limits ()
+    # return normalise_ordered_dict (limits)
 
     bulk = limits['DailyBulkApiBatches']
 
